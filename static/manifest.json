@@ -1,0 +1,22 @@
+{
+  "name": "ConexZ",
+  "short_name": "ConexZ",
+  "description": "Transferência Inteligente de Arquivos",
+  "theme_color": "#00d4ff",
+  "background_color": "#0a0a1a",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
