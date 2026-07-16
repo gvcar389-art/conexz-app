@@ -5,16 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ConexZ - Transferência Inteligente</title>
     
-    <!-- PWA CONFIGURAÇÃO -->
+    <!-- PWA CONFIG -->
     <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icon-192.png">
+    <meta name="theme-color" content="#00d4ff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ConexZ">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#00d4ff">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a1a; color: #fff; min-height:100vh; }
@@ -113,12 +111,6 @@
         .search-box input { flex:1; padding:10px 16px; border-radius:12px; border:1px solid #2a2a5a; background:#12122a; color:#fff; font-size:14px; outline:none; transition:0.3s; min-width:150px; }
         .search-box input:focus { border-color:#00d4ff; }
         
-        .stats-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:16px; }
-        .stat-card { background:#12122a; border-radius:12px; padding:20px; text-align:center; border:1px solid #2a2a5a; }
-        .stat-card i { font-size:28px; color:#00d4ff; margin-bottom:8px; }
-        .stat-value { font-size:24px; font-weight:700; }
-        .stat-label { font-size:12px; color:#a0aec0; }
-        
         .setting-card { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:#12122a; border-radius:12px; border:1px solid #2a2a5a; margin-bottom:8px; flex-wrap:wrap; gap:12px; }
         .setting-card .info h3 { font-size:14px; }
         .setting-card .info p { font-size:12px; color:#a0aec0; }
@@ -167,8 +159,7 @@
             <div class="tab" data-tab="videos">🎬 Vídeos</div>
             <div class="tab" data-tab="music">🎵 Músicas</div>
             <div class="tab" data-tab="images">🖼️ Imagens</div>
-            <div class="tab" data-tab="stats">📊 Stats</div>
-            <div class="tab" data-tab="settings">⚙️</div>
+            <div class="tab" data-tab="settings">⚙️ Config</div>
         </div>
 
         <!-- UPLOAD -->
@@ -210,16 +201,6 @@
             <div id="imageGrid" class="grid"></div>
         </div>
 
-        <!-- STATS -->
-        <div class="tab-content" id="tab-stats">
-            <div class="stats-grid" id="statsGrid">
-                <div class="stat-card"><i class="fas fa-file"></i><div class="stat-value" id="statFiles">0</div><div class="stat-label">Arquivos</div></div>
-                <div class="stat-card"><i class="fas fa-play"></i><div class="stat-value" id="statVideos">0</div><div class="stat-label">Vídeos</div></div>
-                <div class="stat-card"><i class="fas fa-music"></i><div class="stat-value" id="statAudios">0</div><div class="stat-label">Músicas</div></div>
-                <div class="stat-card"><i class="fas fa-image"></i><div class="stat-value" id="statImages">0</div><div class="stat-label">Imagens</div></div>
-            </div>
-        </div>
-
         <!-- SETTINGS -->
         <div class="tab-content" id="tab-settings">
             <div class="setting-card">
@@ -229,11 +210,11 @@
             <div class="setting-card">
                 <div class="info"><h3>🎨 Tema de Cores</h3><p>Escolha a cor principal</p></div>
                 <div class="theme-selector">
-                    <button class="theme-btn active" data-color="#00d4ff" style="background:#00d4ff"></button>
-                    <button class="theme-btn" data-color="#6C63FF" style="background:#6C63FF"></button>
-                    <button class="theme-btn" data-color="#FF6B6B" style="background:#FF6B6B"></button>
-                    <button class="theme-btn" data-color="#FFD93D" style="background:#FFD93D"></button>
-                    <button class="theme-btn" data-color="#6BCB77" style="background:#6BCB77"></button>
+                    <button class="theme-btn active" data-color="#00d4ff" style="background:#00d4ff" onclick="mudarTema('#00d4ff', this)"></button>
+                    <button class="theme-btn" data-color="#6C63FF" style="background:#6C63FF" onclick="mudarTema('#6C63FF', this)"></button>
+                    <button class="theme-btn" data-color="#FF6B6B" style="background:#FF6B6B" onclick="mudarTema('#FF6B6B', this)"></button>
+                    <button class="theme-btn" data-color="#FFD93D" style="background:#FFD93D" onclick="mudarTema('#FFD93D', this)"></button>
+                    <button class="theme-btn" data-color="#6BCB77" style="background:#6BCB77" onclick="mudarTema('#6BCB77', this)"></button>
                 </div>
             </div>
             <div class="setting-card">
@@ -246,11 +227,11 @@
     <!-- PLAYER VÍDEO -->
     <div class="video-modal" id="videoModal">
         <div class="video-modal-content">
-            <button class="video-close" id="closeVideoBtn">✕</button>
+            <button class="video-close" onclick="fecharVideo()">✕</button>
             <video id="videoPlayer" controls></video>
             <div class="video-actions">
-                <button class="btn btn-primary" id="downloadVideoBtn">⬇️ Baixar</button>
-                <button class="btn btn-secondary" id="shareVideoBtn">🔗 Compartilhar</button>
+                <button class="btn btn-primary" onclick="baixarVideo()">⬇️ Baixar</button>
+                <button class="btn btn-secondary" onclick="compartilharVideo()">🔗 Compartilhar</button>
             </div>
         </div>
     </div>
@@ -259,21 +240,21 @@
     <div class="audio-player" id="audioPlayer">
         <div class="audio-controls">
             <span class="title" id="audioTitle">🎵 Música</span>
-            <button class="audio-btn" id="audioBtn">▶️</button>
+            <button class="audio-btn" id="audioBtn" onclick="toggleAudio()">▶️</button>
             <input type="range" id="audioProgress" min="0" max="100" value="0">
             <span class="time" id="audioTime">0:00</span>
-            <button class="audio-btn" id="closeAudioBtn" style="color:#e53e3e;">✕</button>
+            <button class="audio-btn" onclick="fecharAudio()" style="color:#e53e3e;">✕</button>
         </div>
     </div>
 
     <!-- QR CODE -->
     <div class="modal" id="qrModal">
         <div class="modal-content">
-            <button class="close" id="closeQrBtn">✕</button>
+            <button class="close" onclick="fecharQR()">✕</button>
             <h2>📱 Conectar Celular</h2>
             <div id="qrContainer"><p style="color:#a0aec0;">⏳ Gerando...</p></div>
             <p class="qr-url" id="qrUrl">http://...</p>
-            <button class="btn btn-secondary" id="copyLinkBtn">📋 Copiar Link</button>
+            <button class="btn btn-secondary" onclick="copiarLink()">📋 Copiar Link</button>
         </div>
     </div>
 
@@ -323,13 +304,11 @@
                     if(['videos', 'music', 'images', 'files'].includes(tabName)) {
                         carregarArquivos();
                     }
-                    if(tabName === 'stats') carregarStats();
                 });
             });
 
             // QR CODE
             document.getElementById('qrBtn').addEventListener('click', gerarQR);
-            document.getElementById('closeQrBtn').addEventListener('click', fecharQR);
 
             // REFRESH
             document.getElementById('refreshBtn').addEventListener('click', carregarArquivos);
@@ -387,33 +366,6 @@
                     document.documentElement.style.setProperty('--border', '#2a2a5a');
                 }
             });
-
-            // TEMAS
-            document.querySelectorAll('.theme-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    const cor = this.dataset.color;
-                    document.documentElement.style.setProperty('--accent', cor);
-                });
-            });
-
-            // VÍDEO
-            document.getElementById('closeVideoBtn').addEventListener('click', fecharVideo);
-            document.getElementById('downloadVideoBtn').addEventListener('click', baixarVideo);
-            document.getElementById('shareVideoBtn').addEventListener('click', compartilharVideo);
-
-            // ÁUDIO
-            document.getElementById('audioBtn').addEventListener('click', toggleAudio);
-            document.getElementById('closeAudioBtn').addEventListener('click', fecharAudio);
-            document.getElementById('audioProgress').addEventListener('input', function() {
-                if(audioAtual && audioAtual.duration) {
-                    audioAtual.currentTime = (this.value / 100) * audioAtual.duration;
-                }
-            });
-
-            // QR COPY
-            document.getElementById('copyLinkBtn').addEventListener('click', copiarLink);
 
             // SOCKET
             socket.on('new_file', () => {
@@ -504,9 +456,6 @@
                 renderizarArquivos(files);
                 renderizarMidia(files);
                 document.getElementById('fileCount').textContent = files.length;
-                if(document.getElementById('tab-stats').classList.contains('active')) {
-                    carregarStats();
-                }
             } catch(e) {
                 console.error('❌ Erro:', e);
             }
@@ -683,21 +632,6 @@
         }
 
         // =============================================
-        // STATS
-        // =============================================
-
-        async function carregarStats() {
-            try {
-                const res = await fetch('/api/files');
-                const files = await res.json();
-                document.getElementById('statFiles').textContent = files.length;
-                document.getElementById('statVideos').textContent = files.filter(f => f.name.match(/\.(mp4|webm|mov|mkv|avi)$/i)).length;
-                document.getElementById('statAudios').textContent = files.filter(f => f.name.match(/\.(mp3|wav|ogg|flac|m4a)$/i)).length;
-                document.getElementById('statImages').textContent = files.filter(f => f.name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)).length;
-            } catch(e) {}
-        }
-
-        // =============================================
         // FUNÇÕES COMPARTILHADAS
         // =============================================
 
@@ -729,6 +663,36 @@
             } catch(e) {
                 mostrarStatus('❌ Erro ao deletar', 'error');
             }
+        }
+
+        // =============================================
+        // TEMAS (CORES)
+        // =============================================
+
+        function mudarTema(cor, btn) {
+            // Remover active de todos
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            // Adicionar active no clicado
+            btn.classList.add('active');
+            // Mudar a cor principal
+            document.documentElement.style.setProperty('--accent', cor);
+            // Mudar a cor dos botões primários
+            document.querySelectorAll('.btn-primary').forEach(b => {
+                b.style.background = cor;
+            });
+            // Mudar a cor das tabs ativas
+            document.querySelectorAll('.tab.active').forEach(t => {
+                t.style.background = cor;
+                t.style.borderColor = cor;
+            });
+            // Mudar a cor dos badges
+            document.querySelectorAll('.badge').forEach(b => {
+                b.style.background = cor;
+            });
+            // Mudar a cor do logo
+            document.querySelectorAll('.logo h1').forEach(l => {
+                l.style.color = cor;
+            });
         }
 
         // =============================================
@@ -765,32 +729,7 @@
             clearTimeout(el._timeout);
             el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
         }
-        
-           function mudarTema(cor, btn) {
-    // Remover active de todos
-    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-    // Adicionar active no clicado
-    btn.classList.add('active');
-    // Mudar a cor principal
-    document.documentElement.style.setProperty('--accent', cor);
-    // Mudar a cor dos botões
-    document.querySelectorAll('.btn-primary').forEach(b => {
-        b.style.background = cor;
-    });
-    // Mudar a cor das bordas ativas
-    document.querySelectorAll('.tab.active').forEach(t => {
-        t.style.background = cor;
-    });
-   }
-        
-    <div class="theme-selector">
-    <button class="theme-btn active" data-color="#00d4ff" style="background:#00d4ff" onclick="mudarTema('#00d4ff', this)"></button>
-    <button class="theme-btn" data-color="#6C63FF" style="background:#6C63FF" onclick="mudarTema('#6C63FF', this)"></button>
-    <button class="theme-btn" data-color="#FF6B6B" style="background:#FF6B6B" onclick="mudarTema('#FF6B6B', this)"></button>
-    <button class="theme-btn" data-color="#FFD93D" style="background:#FFD93D" onclick="mudarTema('#FFD93D', this)"></button>
-    <button class="theme-btn" data-color="#6BCB77" style="background:#6BCB77" onclick="mudarTema('#6BCB77', this)"></button>
-</div>
-   
+
         // =============================================
         // EXPORTAR FUNÇÕES
         // =============================================
@@ -810,6 +749,7 @@
         window.gerarQR = gerarQR;
         window.fecharQR = fecharQR;
         window.copiarLink = copiarLink;
+        window.mudarTema = mudarTema;
 
         // =============================================
         // INICIAR
