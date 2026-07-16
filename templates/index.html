@@ -766,12 +766,31 @@
             el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
         }
         
-            function mudarTema(cor, btn) {
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.documentElement.style.setProperty('--accent', cor);
-        }
+           function mudarTema(cor, btn) {
+    // Remover active de todos
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+    // Adicionar active no clicado
+    btn.classList.add('active');
+    // Mudar a cor principal
+    document.documentElement.style.setProperty('--accent', cor);
+    // Mudar a cor dos botões
+    document.querySelectorAll('.btn-primary').forEach(b => {
+        b.style.background = cor;
+    });
+    // Mudar a cor das bordas ativas
+    document.querySelectorAll('.tab.active').forEach(t => {
+        t.style.background = cor;
+    });
+   }
         
+    <div class="theme-selector">
+    <button class="theme-btn active" data-color="#00d4ff" style="background:#00d4ff" onclick="mudarTema('#00d4ff', this)"></button>
+    <button class="theme-btn" data-color="#6C63FF" style="background:#6C63FF" onclick="mudarTema('#6C63FF', this)"></button>
+    <button class="theme-btn" data-color="#FF6B6B" style="background:#FF6B6B" onclick="mudarTema('#FF6B6B', this)"></button>
+    <button class="theme-btn" data-color="#FFD93D" style="background:#FFD93D" onclick="mudarTema('#FFD93D', this)"></button>
+    <button class="theme-btn" data-color="#6BCB77" style="background:#6BCB77" onclick="mudarTema('#6BCB77', this)"></button>
+</div>
+   
         // =============================================
         // EXPORTAR FUNÇÕES
         // =============================================

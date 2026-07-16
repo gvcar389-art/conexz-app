@@ -194,7 +194,16 @@ def upload():
 
 @app.route('/api/files')
 def files():
-    return jsonify(get_files_from_db())
+    # Buscar arquivos do armazenamento local
+    files_list = []
+    for file_id, info in db['files'].items():
+        files_list.append({
+            'id': file_id,
+            'name': info['name'],
+            'size': info['size'],
+            'date': info['date']
+        })
+    return jsonify(files_list)
 
 @app.route('/api/view/<file_id>')
 def view(file_id):
