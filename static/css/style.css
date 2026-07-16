@@ -129,7 +129,7 @@ header {
 }
 
 .btn-primary {
-    background: var(--accent);
+    background: #FF6B6B;  /* Vermelho */
     color: #fff;
 }
 
