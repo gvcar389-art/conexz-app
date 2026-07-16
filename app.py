@@ -12,6 +12,7 @@ import secrets
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
+# Carregar variáveis de ambiente
 load_dotenv()
 
 app = Flask(__name__)
@@ -26,12 +27,15 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("⚠️ Supabase não configurado!")
-    supabase = None
+supabase = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✅ Conectado ao Supabase!")
+    except Exception as e:
+        print(f"❌ Erro ao conectar: {e}")
 else:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print("✅ Conectado ao Supabase!")
+    print("⚠️ Supabase não configurado!")
 
 # ==========================================
 # CONFIGURAÇÕES
@@ -60,7 +64,6 @@ def get_ip():
 # ==========================================
 
 def save_file_to_db(file_id, filename, file_path, file_size):
-    """Salva arquivo no Supabase"""
     if not supabase:
         db['files'][file_id] = {
             'name': filename,
@@ -85,7 +88,6 @@ def save_file_to_db(file_id, filename, file_path, file_size):
         return False
 
 def get_files_from_db():
-    """Busca arquivos do Supabase"""
     if not supabase:
         files = []
         for fid, info in db['files'].items():
@@ -113,7 +115,6 @@ def get_files_from_db():
         return []
 
 def get_file_path_from_db(file_id):
-    """Busca caminho do arquivo"""
     if not supabase:
         if file_id in db['files']:
             return db['files'][file_id]['path']
@@ -128,7 +129,6 @@ def get_file_path_from_db(file_id):
         return None
 
 def delete_file_from_db(file_id):
-    """Deleta arquivo do Supabase"""
     if not supabase:
         if file_id in db['files']:
             del db['files'][file_id]
@@ -157,27 +157,20 @@ def device():
 def qr():
     try:
         data = json.dumps({'id': device_id, 'ip': get_ip(), 'port': 5001})
-        
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(data)
         qr.make(fit=True)
-        
         img = qr.make_image(fill_color="black", back_color="white")
         buffered = io.BytesIO()
         img.save(buffered, format="PNG")
         qr_base64 = base64.b64encode(buffered.getvalue()).decode()
-        
         return jsonify({
             'qr': qr_base64,
             'url': f"http://{get_ip()}:5001"
         })
     except Exception as e:
         print(f"❌ Erro no QR Code: {e}")
-        return jsonify({
-            'error': str(e),
-            'qr': None,
-            'url': f"http://{get_ip()}:5001"
-        }), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/upload', methods=['POST'])
 def upload():
@@ -193,7 +186,6 @@ def upload():
     file.save(file_path)
     size = os.path.getsize(file_path)
     
-    # Salvar no Supabase (ou local)
     save_file_to_db(file_id, file.filename, file_path, size)
     
     socketio.emit('new_file', {'id': file_id, 'name': file.filename})
@@ -202,8 +194,7 @@ def upload():
 
 @app.route('/api/files')
 def files():
-    files_list = get_files_from_db()
-    return jsonify(files_list)
+    return jsonify(get_files_from_db())
 
 @app.route('/api/view/<file_id>')
 def view(file_id):
@@ -217,13 +208,7 @@ def download(file_id):
     file_path = get_file_path_from_db(file_id)
     if not file_path or not os.path.exists(file_path):
         return jsonify({'error': 'Não encontrado'}), 404
-    
-    # Pegar nome original
-    if '_' in os.path.basename(file_path):
-        filename = os.path.basename(file_path).split('_', 1)[1]
-    else:
-        filename = os.path.basename(file_path)
-    
+    filename = file_path.split('_', 1)[1] if '_' in file_path else file_path
     return send_file(file_path, as_attachment=True, download_name=filename)
 
 @app.route('/api/share/<file_id>')
@@ -243,20 +228,17 @@ def delete(file_id):
     file_path = get_file_path_from_db(file_id)
     if file_path and os.path.exists(file_path):
         os.remove(file_path)
-    
     delete_file_from_db(file_id)
-    
     socketio.emit('file_deleted', {'id': file_id})
     return jsonify({'message': '🗑️ Deletado'})
 
 @app.route('/api/status')
 def status():
-    files_list = get_files_from_db()
     return jsonify({
         'status': 'online',
         'device': device_id,
         'ip': get_ip(),
-        'files': len(files_list),
+        'files': len(get_files_from_db()),
         'cloud': supabase is not None
     })
 
@@ -264,25 +246,21 @@ def status():
 def manifest():
     return send_file('static/manifest.json', mimetype='application/json')
 
+# ==========================================
+# INICIAR SERVIDOR
+# ==========================================
+
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get('PORT', 5001))
     
     print("""
     ╔═══════════════════════════════════════════════════╗
-    ║                                                   ║
     ║   📱 CONEXZ - Transferência Inteligente          ║
-    ║                                                   ║
     ╠═══════════════════════════════════════════════════╣
-    ║                                                   ║
     ║  🌐  LOCAL:    http://localhost:5001             ║
     ║  📱  CELULAR:  http://{}:5001      ║
     ║  ☁️  NUVEM:    {}                  ║
-    ║                                                   ║
-    ║  🎬  Player de Vídeo: ✅ ATIVADO                 ║
-    ║  🎵  Player de Áudio: ✅ ATIVADO                 ║
-    ║  🔗  QR Code:    /api/qr                        ║
-    ║                                                   ║
+    ║  🎬  Player:   ✅ ATIVADO                       ║
     ╚═══════════════════════════════════════════════════╝
     """.format(get_ip(), "✅ CONECTADO" if supabase else "❌ LOCAL"))
     
