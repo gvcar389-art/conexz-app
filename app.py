@@ -126,16 +126,21 @@ def files():
 
 @app.route('/api/view/<file_id>')
 def view(file_id):
-    """Visualizar arquivo"""
-    if file_id not in db['files']:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    file_info = db['files'][file_id]
-    if not os.path.exists(file_info['path']):
-        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
+    file_path = get_file_path_from_db(file_id)
+    if not file_path or not os.path.exists(file_path):
+        # Tentar buscar na pasta uploads diretamente
+        import glob
+        files = glob.glob(f"uploads/{file_id}_*")
+        if files:
+            file_path = files[0]
+        else:
+            return jsonify({'error': 'Arquivo não encontrado'}), 404
     
     # Detectar o tipo de arquivo
-    filename = file_info['name']
+    filename = os.path.basename(file_path)
+    if '_' in filename:
+        filename = filename.split('_', 1)[1]
+    
     ext = filename.split('.')[-1].lower() if '.' in filename else ''
     
     mimetypes = {
@@ -152,7 +157,7 @@ def view(file_id):
     }
     mimetype = mimetypes.get(ext, 'application/octet-stream')
     
-    return send_file(file_info['path'], mimetype=mimetype)
+    return send_file(file_path, mimetype=mimetype)
 
 @app.route('/api/download/<file_id>')
 def download(file_id):
