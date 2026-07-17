@@ -1,8 +1,20 @@
-__pycache__/
+# Pasta do Flutter
+flutter/
+
+# Uploads e arquivos temporários
 uploads/
+__pycache__/
 *.pyc
+*.pyo
+
+# Arquivos de ambiente
 .env
-venv/
-.idea/
+.env.local
+
+# IDE
 .vscode/
+.idea/
+*.swp
+
+# Logs
 *.log
