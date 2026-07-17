@@ -12,6 +12,7 @@ import secrets
 import json
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import glob
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -62,86 +63,83 @@ def get_ip():
         return "127.0.0.1"
 
 # ==========================================
-# FUNÇÕES DO SUPABASE
+# FUNÇÕES DE ARMAZENAMENTO
 # ==========================================
 
-def save_file_to_db(file_id, filename, file_path, file_size):
-    """Salva arquivo no Supabase"""
-    if not supabase:
-        db['files'][file_id] = {
-            'name': filename,
-            'path': file_path,
-            'size': file_size,
-            'date': time.time()
-        }
-        return True
+def save_file(file_id, filename, file_path, file_size):
+    """Salva arquivo localmente e no Supabase"""
+    # Salvar localmente sempre
+    db['files'][file_id] = {
+        'name': filename,
+        'path': file_path,
+        'size': file_size,
+        'date': time.time()
+    }
     
-    try:
-        data = {
-            'file_id': file_id,
-            'filename': filename,
-            'file_path': file_path,
-            'file_size': file_size,
-            'file_type': filename.split('.')[-1] if '.' in filename else '',
-            'created_at': time.time()
-        }
-        supabase.table('files').insert(data).execute()
-        return True
-    except Exception as e:
-        print(f"❌ Erro ao salvar no Supabase: {e}")
-        # Fallback local
-        db['files'][file_id] = {
-            'name': filename,
-            'path': file_path,
-            'size': file_size,
-            'date': time.time()
-        }
-        return False
+    # Salvar no Supabase
+    if supabase:
+        try:
+            data = {
+                'file_id': file_id,
+                'filename': filename,
+                'file_path': file_path,
+                'file_size': file_size,
+                'file_type': filename.split('.')[-1] if '.' in filename else ''
+            }
+            supabase.table('files').insert(data).execute()
+            print(f"✅ Arquivo salvo no Supabase: {filename}")
+            return True
+        except Exception as e:
+            print(f"❌ Erro ao salvar no Supabase: {e}")
+            return False
+    return True
 
-def get_files_from_db():
-    """Busca arquivos do Supabase"""
-    if not supabase:
-        files = []
-        for fid, info in db['files'].items():
-            files.append({
-                'id': fid,
-                'name': info['name'],
-                'size': info['size'],
-                'date': info['date']
-            })
-        return files
+def get_files():
+    """Busca arquivos do Supabase e local"""
+    files_dict = {}
     
-    try:
-        result = supabase.table('files').select('*').execute()
-        files = []
-        for item in result.data:
-            files.append({
-                'id': item['file_id'],
-                'name': item['filename'],
-                'size': item['file_size'],
-                'date': item['created_at']
-            })
-        return files
-    except Exception as e:
-        print(f"❌ Erro ao buscar do Supabase: {e}")
-        # Fallback local
-        files = []
-        for fid, info in db['files'].items():
-            files.append({
-                'id': fid,
-                'name': info['name'],
-                'size': info['size'],
-                'date': info['date']
-            })
-        return files
+    # Buscar localmente
+    for fid, info in db['files'].items():
+        files_dict[fid] = {
+            'id': fid,
+            'name': info['name'],
+            'size': info['size'],
+            'date': info['date']
+        }
+    
+    # Buscar no Supabase
+    if supabase:
+        try:
+            result = supabase.table('files').select('*').execute()
+            for item in result.data:
+                file_id = item['file_id']
+                if file_id not in files_dict:
+                    files_dict[file_id] = {
+                        'id': file_id,
+                        'name': item['filename'],
+                        'size': item['file_size'],
+                        'date': item['created_at']
+                    }
+        except Exception as e:
+            print(f"❌ Erro ao buscar do Supabase: {e}")
+    
+    # Converter para lista
+    files_list = list(files_dict.values())
+    print(f"📂 {len(files_list)} arquivos encontrados")
+    return files_list
 
-def get_file_path_from_db(file_id):
-    """Busca caminho do arquivo"""
-    # Primeiro verificar local
+def get_file_path(file_id):
+    """Busca o caminho do arquivo"""
+    # Verificar local
     if file_id in db['files']:
         return db['files'][file_id]['path']
     
-    # Depois buscar no Supabase
+    # Buscar na pasta uploads
+    files = glob.glob(f"uploads/{file_id}_*")
+    if files:
+        return files[0]
+    
+    # Buscar no Supabase
     if supabase:
         try:
             result = supabase.table('files').select('file_path').eq('file_id', file_id).execute()
@@ -149,22 +147,23 @@ def get_file_path_from_db(file_id):
                 return result.data[0]['file_path']
         except:
             pass
+    
     return None
 
-def delete_file_from_db(file_id):
-    """Deleta arquivo do Supabase"""
+def delete_file(file_id):
+    """Deleta arquivo"""
     # Deletar local
     if file_id in db['files']:
         del db['files'][file_id]
     
-    # Deletar no Supabase
+    # Deletar do Supabase
     if supabase:
         try:
             supabase.table('files').delete().eq('file_id', file_id).execute()
-            return True
         except:
             pass
-    return False
+    
+    return True
 
 # ==========================================
 # ROTAS DA API
@@ -194,7 +193,6 @@ def qr():
             'url': f"http://{get_ip()}:5001"
         })
     except Exception as e:
-        print(f"❌ Erro no QR Code: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/upload', methods=['POST'])
@@ -214,8 +212,8 @@ def upload():
     file.save(file_path)
     size = os.path.getsize(file_path)
     
-    # Salvar no Supabase (ou local)
-    save_file_to_db(file_id, file.filename, file_path, size)
+    # Salvar no sistema
+    save_file(file_id, file.filename, file_path, size)
     
     print(f"✅ Arquivo salvo: {file.filename} ({size} bytes)")
     
@@ -230,14 +228,13 @@ def upload():
 
 @app.route('/api/files')
 def files():
-    files_list = get_files_from_db()
-    print(f"📂 Listando {len(files_list)} arquivos")
+    files_list = get_files()
     return jsonify(files_list)
 
 @app.route('/api/view/<file_id>')
 def view(file_id):
     """Visualizar arquivo"""
-    file_path = get_file_path_from_db(file_id)
+    file_path = get_file_path(file_id)
     if not file_path or not os.path.exists(file_path):
         return jsonify({'error': 'Arquivo não encontrado'}), 404
     
@@ -267,7 +264,7 @@ def view(file_id):
 @app.route('/api/download/<file_id>')
 def download(file_id):
     """Baixar arquivo"""
-    file_path = get_file_path_from_db(file_id)
+    file_path = get_file_path(file_id)
     if not file_path or not os.path.exists(file_path):
         return jsonify({'error': 'Arquivo não encontrado'}), 404
     
@@ -284,7 +281,7 @@ def download(file_id):
 @app.route('/api/share/<file_id>')
 def share(file_id):
     """Criar link compartilhável"""
-    if not get_file_path_from_db(file_id):
+    if not get_file_path(file_id):
         return jsonify({'error': 'Arquivo não encontrado'}), 404
     
     token = secrets.token_urlsafe(12)
@@ -296,7 +293,7 @@ def share(file_id):
 @app.route('/api/s/<token>')
 def shared(token):
     """Acessar link compartilhável"""
-    files_list = get_files_from_db()
+    files_list = get_files()
     if files_list:
         return download(files_list[0]['id'])
     return jsonify({'error': 'Nenhum arquivo disponível'}), 404
@@ -304,18 +301,18 @@ def shared(token):
 @app.route('/api/delete/<file_id>', methods=['DELETE'])
 def delete(file_id):
     """Deletar arquivo"""
-    file_path = get_file_path_from_db(file_id)
+    file_path = get_file_path(file_id)
     if file_path and os.path.exists(file_path):
         os.remove(file_path)
     
-    delete_file_from_db(file_id)
+    delete_file(file_id)
     
     socketio.emit('file_deleted', {'id': file_id})
     return jsonify({'message': '🗑️ Arquivo deletado'})
 
 @app.route('/api/status')
 def status():
-    files_list = get_files_from_db()
+    files_list = get_files()
     return jsonify({
         'status': 'online',
         'device': device_id,
@@ -338,19 +335,16 @@ if __name__ == '__main__':
     
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   📱 CONEXZ - Transferência Inteligente (COM SUPABASE)      ║
+    ║   📱 CONEXZ - Transferência Inteligente (CORRIGIDO)         ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║  🌐  LOCAL:    http://localhost:{}                           ║
     ║  📱  CELULAR:  http://{}:{}                ║
     ║  ☁️  NUVEM:    {}                                            ║
-    ║  🎬  PLAYER:   ✅ ATIVADO                                   ║
-    ║  💾  ARQUIVOS: SALVOS NA NUVEM!                             ║
+    ║  💾  ARQUIVOS: SALVOS LOCALMENTE E NA NUVEM                 ║
     ╚═══════════════════════════════════════════════════════════════╝
     """.format(port, ip, port, "✅ CONECTADO" if supabase else "❌ LOCAL"))
     
-    print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
-    print("☁️  Arquivos salvos no Supabase (nuvem)!")
-    print("🎬 Envie um vídeo e clique em 'Vídeos' para assistir!\n")
+    print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}\n")
     
     socketio.run(
         app,
