@@ -9,33 +9,16 @@ import hashlib
 import time
 import socket
 import secrets
-from supabase import create_client, Client
-from dotenv import load_dotenv
+import json
 
-# Carregar variáveis de ambiente
-load_dotenv()
+# ==========================================
+# CONFIGURAÇÃO DO APP
+# ==========================================
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'conexz-secret'
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
-
-# ==========================================
-# CONFIGURAR SUPABASE
-# ==========================================
-
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
-
-supabase = None
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
-        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ Conectado ao Supabase!")
-    except Exception as e:
-        print(f"❌ Erro ao conectar: {e}")
-else:
-    print("⚠️ Supabase não configurado!")
 
 # ==========================================
 # CONFIGURAÇÕES
@@ -46,6 +29,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB
 
+# Armazenamento em memória (100% LOCAL)
 db = {'files': {}}
 device_id = secrets.token_hex(8)
 
@@ -58,88 +42,6 @@ def get_ip():
         return ip
     except:
         return "127.0.0.1"
-
-# ==========================================
-# FUNÇÕES DO SUPABASE
-# ==========================================
-
-def save_file_to_db(file_id, filename, file_path, file_size):
-    if not supabase:
-        db['files'][file_id] = {
-            'name': filename,
-            'path': file_path,
-            'size': file_size,
-            'date': time.time()
-        }
-        return True
-    
-    try:
-        data = {
-            'file_id': file_id,
-            'filename': filename,
-            'file_path': file_path,
-            'file_size': file_size,
-            'file_type': filename.split('.')[-1] if '.' in filename else ''
-        }
-        supabase.table('files').insert(data).execute()
-        return True
-    except Exception as e:
-        print(f"❌ Erro ao salvar: {e}")
-        return False
-
-def get_files_from_db():
-    if not supabase:
-        files = []
-        for fid, info in db['files'].items():
-            files.append({
-                'id': fid,
-                'name': info['name'],
-                'size': info['size'],
-                'date': info['date']
-            })
-        return files
-    
-    try:
-        result = supabase.table('files').select('*').execute()
-        files = []
-        for item in result.data:
-            files.append({
-                'id': item['file_id'],
-                'name': item['filename'],
-                'size': item['file_size'],
-                'date': item['created_at']
-            })
-        return files
-    except Exception as e:
-        print(f"❌ Erro ao buscar: {e}")
-        return []
-
-def get_file_path_from_db(file_id):
-    if not supabase:
-        if file_id in db['files']:
-            return db['files'][file_id]['path']
-        return None
-    
-    try:
-        result = supabase.table('files').select('file_path').eq('file_id', file_id).execute()
-        if result.data:
-            return result.data[0]['file_path']
-        return None
-    except:
-        return None
-
-def delete_file_from_db(file_id):
-    if not supabase:
-        if file_id in db['files']:
-            del db['files'][file_id]
-            return True
-        return False
-    
-    try:
-        supabase.table('files').delete().eq('file_id', file_id).execute()
-        return True
-    except:
-        return False
 
 # ==========================================
 # ROTAS DA API
@@ -181,20 +83,36 @@ def upload():
     if file.filename == '':
         return jsonify({'error': 'Nome vazio'}), 400
     
+    # Gerar ID único
     file_id = hashlib.md5(file.filename.encode() + str(time.time()).encode()).hexdigest()
+    
+    # Salvar arquivo fisicamente
     file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{file.filename}")
     file.save(file_path)
     size = os.path.getsize(file_path)
     
-    save_file_to_db(file_id, file.filename, file_path, size)
+    # Salvar no banco de dados em memória
+    db['files'][file_id] = {
+        'name': file.filename,
+        'path': file_path,
+        'size': size,
+        'date': time.time()
+    }
+    
+    print(f"✅ Arquivo salvo: {file.filename} ({size} bytes)")
     
     socketio.emit('new_file', {'id': file_id, 'name': file.filename})
     
-    return jsonify({'id': file_id, 'name': file.filename, 'message': '✅ Enviado!'})
+    return jsonify({
+        'id': file_id,
+        'name': file.filename,
+        'size': size,
+        'message': '✅ Arquivo enviado com sucesso!'
+    })
 
 @app.route('/api/files')
 def files():
-    # Buscar arquivos do armazenamento local
+    """Lista todos os arquivos"""
     files_list = []
     for file_id, info in db['files'].items():
         files_list.append({
@@ -203,52 +121,98 @@ def files():
             'size': info['size'],
             'date': info['date']
         })
+    print(f"📂 Listando {len(files_list)} arquivos")
     return jsonify(files_list)
 
 @app.route('/api/view/<file_id>')
 def view(file_id):
-    file_path = get_file_path_from_db(file_id)
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'Não encontrado'}), 404
-    return send_file(file_path)
+    """Visualizar arquivo"""
+    if file_id not in db['files']:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    
+    file_info = db['files'][file_id]
+    if not os.path.exists(file_info['path']):
+        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
+    
+    # Detectar o tipo de arquivo
+    filename = file_info['name']
+    ext = filename.split('.')[-1].lower() if '.' in filename else ''
+    
+    mimetypes = {
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'mp3': 'audio/mpeg',
+        'wav': 'audio/wav',
+        'ogg': 'audio/ogg',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'pdf': 'application/pdf'
+    }
+    mimetype = mimetypes.get(ext, 'application/octet-stream')
+    
+    return send_file(file_info['path'], mimetype=mimetype)
 
 @app.route('/api/download/<file_id>')
 def download(file_id):
-    file_path = get_file_path_from_db(file_id)
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'Não encontrado'}), 404
-    filename = file_path.split('_', 1)[1] if '_' in file_path else file_path
-    return send_file(file_path, as_attachment=True, download_name=filename)
+    """Baixar arquivo"""
+    if file_id not in db['files']:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    
+    file_info = db['files'][file_id]
+    if not os.path.exists(file_info['path']):
+        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
+    
+    return send_file(
+        file_info['path'],
+        as_attachment=True,
+        download_name=file_info['name']
+    )
 
 @app.route('/api/share/<file_id>')
 def share(file_id):
+    """Criar link compartilhável"""
+    if file_id not in db['files']:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    
     token = secrets.token_urlsafe(12)
-    return jsonify({'link': f"{request.host_url}api/s/{token}", 'expires': int(time.time()) + 86400})
+    return jsonify({
+        'link': f"{request.host_url}api/s/{token}",
+        'expires': int(time.time()) + 86400
+    })
 
 @app.route('/api/s/<token>')
 def shared(token):
-    files_list = get_files_from_db()
-    if files_list:
-        return download(files_list[0]['id'])
-    return jsonify({'error': 'Nenhum arquivo'}), 404
+    """Acessar link compartilhável"""
+    # Pega o primeiro arquivo da lista
+    for file_id in db['files']:
+        return download(file_id)
+    return jsonify({'error': 'Nenhum arquivo disponível'}), 404
 
 @app.route('/api/delete/<file_id>', methods=['DELETE'])
 def delete(file_id):
-    file_path = get_file_path_from_db(file_id)
-    if file_path and os.path.exists(file_path):
-        os.remove(file_path)
-    delete_file_from_db(file_id)
+    """Deletar arquivo"""
+    if file_id not in db['files']:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    
+    file_info = db['files'][file_id]
+    if os.path.exists(file_info['path']):
+        os.remove(file_info['path'])
+    
+    del db['files'][file_id]
+    
     socketio.emit('file_deleted', {'id': file_id})
-    return jsonify({'message': '🗑️ Deletado'})
+    return jsonify({'message': '🗑️ Arquivo deletado'})
 
 @app.route('/api/status')
 def status():
+    """Status do servidor"""
     return jsonify({
         'status': 'online',
         'device': device_id,
         'ip': get_ip(),
-        'files': len(get_files_from_db()),
-        'cloud': supabase is not None
+        'files': len(db['files'])
     })
 
 @app.route('/manifest.json')
@@ -260,25 +224,31 @@ def manifest():
 # ==========================================
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5001))
+    port = 5001
+    ip = get_ip()
     
     print("""
-    ╔═══════════════════════════════════════════════════╗
-    ║   📱 CONEXZ - Transferência Inteligente          ║
-    ╠═══════════════════════════════════════════════════╣
-    ║  🌐  LOCAL:    http://localhost:5001             ║
-    ║  📱  CELULAR:  http://{}:5001      ║
-    ║  ☁️  NUVEM:    {}                  ║
-    ║  🎬  Player:   ✅ ATIVADO                       ║
-    ╚═══════════════════════════════════════════════════╝
-    """.format(get_ip(), "✅ CONECTADO" if supabase else "❌ LOCAL"))
+    ╔═══════════════════════════════════════════════════════════════╗
+    ║   📱 CONEXZ - Transferência Inteligente (100% LOCAL)        ║
+    ╠═══════════════════════════════════════════════════════════════╣
+    ║  🌐  LOCAL:    http://localhost:{}                           ║
+    ║  📱  CELULAR:  http://{}:{}                ║
+    ║  📱  DISPOSITIVO: {}                                     ║
+    ║  💾  ARMAZENAMENTO: LOCAL (SEM NUVEM)                       ║
+    ║  🎬  PLAYER: ✅ ATIVADO                                    ║
+    ║  🎨  CORES: ✅ FUNCIONANDO                                 ║
+    ╚═══════════════════════════════════════════════════════════════╝
+    """.format(port, ip, port, device_id[:8]))
     
-    print(f"\n📱 NO CELULAR DIGITE: http://{get_ip()}:5001\n")
+    print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
+    print("🎬 Envie um vídeo e clique em 'Vídeos' para assistir!\n")
+    print("⚠️  ARQUIVOS FICAM SALVOS LOCALMENTE (pasta uploads/)")
+    print("⚠️  QUANDO REINICIAR O SERVIDOR, OS ARQUIVOS SOMEM\n")
     
     socketio.run(
         app,
         host='0.0.0.0',
         port=port,
-        debug=False,
+        debug=True,
         allow_unsafe_werkzeug=True
     )
