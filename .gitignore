@@ -1,20 +1,94 @@
-# Pasta do Flutter
-flutter/
+# ==========================================
+# ARQUIVOS DO SISTEMA
+# ==========================================
 
-# Uploads e arquivos temporários
-uploads/
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ==========================================
+# PYTHON
+# ==========================================
+
+# Arquivos compilados
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.pyd
 
-# Arquivos de ambiente
+# Distribuições
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Ambiente virtual
+venv/
+env/
+.venv/
+
+# ==========================================
+# SUPABASE / CHAVES SECRETAS (NUNCA COMPARTILHAR!)
+# ==========================================
+
 .env
 .env.local
+.env.production
+*.key
+*.pem
 
-# IDE
-.vscode/
-.idea/
-*.swp
+# ==========================================
+# ARQUIVOS DO APP
+# ==========================================
+
+# Arquivos enviados pelos usuários
+uploads/
+*.tmp
 
 # Logs
 *.log
+*.log.*
+
+# ==========================================
+# EDITORES E IDE
+# ==========================================
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# IntelliJ / PyCharm
+.idea/
+*.iml
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# ==========================================
+# FLUTTER (se tiver)
+# ==========================================
+
+flutter/
+*.apk
+*.aab
+*.ipa
+
+# ==========================================
+# GITHUB
+# ==========================================
+
+# GitHub Actions
+.github/
+
+# ==========================================
+# RENDER (hospedagem)
+# ==========================================
+
+.render/
+*.render.yaml
