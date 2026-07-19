@@ -12,7 +12,6 @@ import secrets
 import json
 from supabase import create_client, Client
 from dotenv import load_dotenv
-import glob
 from datetime import datetime
 
 # Carregar variáveis de ambiente
@@ -37,8 +36,6 @@ if SUPABASE_URL and SUPABASE_KEY:
         print("✅ Conectado ao Supabase!")
     except Exception as e:
         print(f"❌ Erro ao conectar Supabase: {e}")
-else:
-    print("⚠️ Supabase não configurado!")
 
 # ==========================================
 # CONFIGURAÇÕES
@@ -64,11 +61,11 @@ def get_ip():
         return "127.0.0.1"
 
 # ==========================================
-# FUNÇÕES DE ARMAZENAMENTO (COM SUPABASE)
+# FUNÇÕES DO SUPABASE STORAGE
 # ==========================================
 
-def save_file_to_supabase(file_id, filename, file_data, file_size):
-    """Salva arquivo no Supabase Storage"""
+def save_file_to_storage(file_id, filename, file_data, file_size):
+    """Salva arquivo no Supabase Storage (nuvem)"""
     if not supabase:
         return False
     
@@ -87,14 +84,14 @@ def save_file_to_supabase(file_id, filename, file_data, file_size):
         }
         supabase.table('files').insert(data).execute()
         
-        print(f"✅ Arquivo salvo no Supabase: {filename}")
+        print(f"✅ Arquivo salvo na nuvem: {filename}")
         return True
     except Exception as e:
-        print(f"❌ Erro ao salvar no Supabase: {e}")
+        print(f"❌ Erro ao salvar na nuvem: {e}")
         return False
 
-def get_files_from_supabase():
-    """Busca arquivos do Supabase"""
+def get_files_from_storage():
+    """Busca arquivos do Supabase Storage"""
     if not supabase:
         return []
     
@@ -123,8 +120,8 @@ def get_files_from_supabase():
         print(f"❌ Erro ao buscar arquivos: {e}")
         return []
 
-def delete_file_from_supabase(file_id, filename):
-    """Deleta arquivo do Supabase"""
+def delete_file_from_storage(file_id, filename):
+    """Deleta arquivo do Supabase Storage"""
     if not supabase:
         return False
     
@@ -186,17 +183,11 @@ def upload():
     file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{file.filename}")
     file.save(file_path)
     size = os.path.getsize(file_path)
-    db['files'][file_id] = {
-        'name': file.filename,
-        'path': file_path,
-        'size': size,
-        'date': time.time()
-    }
     
-    # Salvar no Supabase
+    # Salvar na nuvem (Supabase Storage)
     file.seek(0)  # Voltar ao início do arquivo
     file_data = file.read()
-    save_file_to_supabase(file_id, file.filename, file_data, size)
+    save_file_to_storage(file_id, file.filename, file_data, size)
     
     print(f"✅ Arquivo salvo: {file.filename} ({size} bytes)")
     
@@ -211,111 +202,73 @@ def upload():
 
 @app.route('/api/files')
 def files():
-    # Buscar do Supabase primeiro
-    files = get_files_from_supabase()
-    
-    # Se não tiver no Supabase, buscar localmente
-    if not files:
-        for file_id, info in db['files'].items():
-            files.append({
-                'id': file_id,
-                'name': info['name'],
-                'size': info['size'],
-                'date': datetime.fromtimestamp(info['date']).isoformat(),
-                'url': None
-            })
-    
-    print(f"📂 {len(files)} arquivos encontrados")
+    # Buscar da nuvem
+    files = get_files_from_storage()
+    print(f"📂 {len(files)} arquivos na nuvem")
     return jsonify(files)
 
 @app.route('/api/view/<file_id>')
 def view(file_id):
-    """Visualizar arquivo (da nuvem ou local)"""
-    # Tentar do Supabase
-    if supabase:
-        try:
-            bucket = supabase.storage.from_('conexz-files')
-            result = supabase.table('files').select('filename').eq('file_id', file_id).execute()
-            if result.data:
-                filename = result.data[0]['filename']
-                url = bucket.get_public_url(f"{file_id}_{filename}")
-                return jsonify({'url': url})
-        except:
-            pass
+    """Visualizar arquivo (da nuvem)"""
+    if not supabase:
+        return jsonify({'error': 'Nuvem não disponível'}), 500
     
-    # Fallback local
-    file_path = None
-    if file_id in db['files']:
-        file_path = db['files'][file_id]['path']
-    else:
-        files = glob.glob(f"uploads/{file_id}_*")
-        if files:
-            file_path = files[0]
-    
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    return send_file(file_path)
+    try:
+        # Buscar nome do arquivo
+        result = supabase.table('files').select('filename').eq('file_id', file_id).execute()
+        if not result.data:
+            return jsonify({'error': 'Arquivo não encontrado'}), 404
+        
+        filename = result.data[0]['filename']
+        bucket = supabase.storage.from_('conexz-files')
+        url = bucket.get_public_url(f"{file_id}_{filename}")
+        
+        # Redirecionar para a URL pública
+        return jsonify({'url': url})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/download/<file_id>')
 def download(file_id):
-    """Baixar arquivo (da nuvem ou local)"""
-    # Tentar do Supabase
-    if supabase:
-        try:
-            result = supabase.table('files').select('filename').eq('file_id', file_id).execute()
-            if result.data:
-                filename = result.data[0]['filename']
-                bucket = supabase.storage.from_('conexz-files')
-                url = bucket.get_public_url(f"{file_id}_{filename}")
-                return jsonify({'download_url': url})
-        except:
-            pass
+    """Baixar arquivo (da nuvem)"""
+    if not supabase:
+        return jsonify({'error': 'Nuvem não disponível'}), 500
     
-    # Fallback local
-    file_path = None
-    if file_id in db['files']:
-        file_path = db['files'][file_id]['path']
-    else:
-        files = glob.glob(f"uploads/{file_id}_*")
-        if files:
-            file_path = files[0]
-    
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    filename = os.path.basename(file_path)
-    if '_' in filename:
-        filename = filename.split('_', 1)[1]
-    
-    return send_file(file_path, as_attachment=True, download_name=filename)
+    try:
+        # Buscar nome do arquivo
+        result = supabase.table('files').select('filename').eq('file_id', file_id).execute()
+        if not result.data:
+            return jsonify({'error': 'Arquivo não encontrado'}), 404
+        
+        filename = result.data[0]['filename']
+        bucket = supabase.storage.from_('conexz-files')
+        url = bucket.get_public_url(f"{file_id}_{filename}")
+        
+        return jsonify({'download_url': url})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/delete/<file_id>', methods=['DELETE'])
 def delete(file_id):
     """Deletar arquivo"""
-    # Deletar do Supabase
-    if supabase:
-        try:
-            result = supabase.table('files').select('filename').eq('file_id', file_id).execute()
-            if result.data:
-                filename = result.data[0]['filename']
-                delete_file_from_supabase(file_id, filename)
-        except:
-            pass
+    if not supabase:
+        return jsonify({'error': 'Nuvem não disponível'}), 500
     
-    # Deletar local
-    if file_id in db['files']:
-        file_path = db['files'][file_id]['path']
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        del db['files'][file_id]
-    
-    socketio.emit('file_deleted', {'id': file_id})
-    return jsonify({'message': '🗑️ Arquivo deletado'})
+    try:
+        # Buscar nome do arquivo
+        result = supabase.table('files').select('filename').eq('file_id', file_id).execute()
+        if result.data:
+            filename = result.data[0]['filename']
+            delete_file_from_storage(file_id, filename)
+        
+        socketio.emit('file_deleted', {'id': file_id})
+        return jsonify({'message': '🗑️ Arquivo deletado'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/status')
 def status():
-    files = get_files_from_supabase() or list(db['files'].values())
+    files = get_files_from_storage()
     return jsonify({
         'status': 'online',
         'device': device_id,
@@ -338,13 +291,12 @@ if __name__ == '__main__':
     
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   📱 CONEXZ - TRANSFERÊNCIA INTELIGENTE (NUVEM)            ║
+    ║   📱 CONEXZ - SALVANDO ARQUIVOS NA NUVEM!                   ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║  🌐  LOCAL:    http://localhost:{}                           ║
     ║  📱  CELULAR:  http://{}:{}                ║
     ║  ☁️  NUVEM:    {}                                            ║
     ║  💾  ARQUIVOS: SALVOS NA NUVEM (NUNCA SOMEM!)               ║
-    ║  📂  HISTÓRICO: ACESSO A TODOS OS ARQUIVOS                  ║
     ╚═══════════════════════════════════════════════════════════════╝
     """.format(port, ip, port, "✅ CONECTADO" if supabase else "❌ LOCAL"))
     
