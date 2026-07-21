@@ -28,7 +28,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB
 
 # Banco de dados em memória (arquivos ficam enquanto servidor roda)
-db = {'files': {}}
+db = {'files': {}, 'shared_links': {}}
 device_id = secrets.token_hex(8)
 
 def get_local_ip():
@@ -68,13 +68,12 @@ def device():
 
 @app.route('/api/qr')
 def generate_qr():
-    # Pega o IP do computador
+    """Gera QR Code com o IP correto"""
     ip = get_local_ip()
     
     # Se o IP for 127.0.0.1, tenta pegar o IP da rede
     if ip == '127.0.0.1':
         try:
-            import socket
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
             ip = s.getsockname()[0]
@@ -86,20 +85,6 @@ def generate_qr():
         'device_id': device_id,
         'ip': ip,
         'port': 5001
-    })
-    
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(data)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffered = io.BytesIO()
-    img.save(buffered, format="PNG")
-    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
-    
-    return jsonify({
-        'qr': qr_base64,
-        'url': f"http://{ip}:5001"
     })
     
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
@@ -238,7 +223,6 @@ def share_file(file_id):
     share_url = f"{request.host_url}api/s/{token}"
     
     # Salvar link
-    db['shared_links'] = db.get('shared_links', {})
     db['shared_links'][token] = {
         'file_id': file_id,
         'expires': time.time() + 86400  # 24 horas
@@ -252,8 +236,6 @@ def share_file(file_id):
 @app.route('/api/s/<token>')
 def shared_access(token):
     """Acessar link compartilhável"""
-    db['shared_links'] = db.get('shared_links', {})
-    
     if token not in db['shared_links']:
         return jsonify({'error': 'Link inválido'}), 404
     
@@ -288,6 +270,42 @@ def status():
         'ip': get_local_ip(),
         'port': 5001,
         'files': len(db['files'])
+    })
+
+@app.route('/api/status-completo')
+def status_completo():
+    """Status completo com IP, hora e contagem de arquivos"""
+    now = datetime.now()
+    
+    # Contar arquivos por tipo
+    videos = 0
+    musicas = 0
+    imagens = 0
+    documentos = 0
+    
+    for file_id, info in db['files'].items():
+        name = info['name'].lower()
+        if name.endswith(('.mp4', '.webm', '.mov', '.mkv', '.avi')):
+            videos += 1
+        elif name.endswith(('.mp3', '.wav', '.ogg', '.flac', '.m4a')):
+            musicas += 1
+        elif name.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')):
+            imagens += 1
+        elif name.endswith(('.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt')):
+            documentos += 1
+    
+    return jsonify({
+        'ip': get_local_ip(),
+        'port': 5001,
+        'data': now.strftime('%d/%m/%Y'),
+        'hora': now.strftime('%H:%M:%S'),
+        'dispositivo': device_id[:8],
+        'arquivos': len(db['files']),
+        'videos': videos,
+        'musicas': musicas,
+        'imagens': imagens,
+        'documentos': documentos,
+        'status': 'online'
     })
 
 # ==========================================

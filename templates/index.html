@@ -48,6 +48,115 @@
         .btn-danger:hover { background: #c53030; }
         .btn-sm { padding: 6px 12px; font-size: 12px; }
         
+        /* STATUS PANEL */
+        .status-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .status-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .status-title i { color: var(--accent); }
+        .status-badge {
+            font-size: 12px;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(72, 187, 120, 0.2);
+            color: #48bb78;
+        }
+        .status-badge.offline {
+            background: rgba(229, 62, 62, 0.2);
+            color: #fc8181;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        .status-item {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .status-item:hover { border-color: var(--accent); }
+        .status-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+        .status-sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .status-sub span {
+            background: var(--bg-card);
+            padding: 2px 10px;
+            border-radius: 10px;
+        }
+        .status-actions { display: flex; gap: 8px; }
+        
+        /* IP DISPLAY */
+        .ip-display {
+            background: var(--bg-card);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 12px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .ip-display.active { display: block; }
+        .ip-display .ip-title {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .ip-display .ip-address {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+            margin: 4px 0;
+            word-break: break-all;
+        }
+        .ip-display .ip-port {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .ip-display .ip-copy { margin-top: 8px; }
+        
         /* TABS */
         .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { padding: 10px 20px; border-radius: 12px; cursor: pointer; background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary); transition: var(--transition); font-size: 14px; font-weight: 500; }
@@ -194,9 +303,54 @@
             </div>
             <div class="header-actions">
                 <span class="device-badge" id="deviceId"><i class="fas fa-qrcode"></i> ID: ...</span>
+                <button class="btn btn-secondary" id="ipBtn"><i class="fas fa-wifi"></i> IP</button>
                 <button class="btn btn-primary" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</button>
             </div>
         </header>
+
+        <!-- STATUS PANEL -->
+        <div class="status-panel" id="statusPanel">
+            <div class="status-header">
+                <div class="status-title">
+                    <i class="fas fa-satellite-dish"></i>
+                    <span>Status da Conexão</span>
+                    <span class="status-badge" id="statusBadge">🟢 Online</span>
+                </div>
+                <div class="status-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="atualizarStatus()">
+                        <i class="fas fa-sync"></i> Atualizar
+                    </button>
+                </div>
+            </div>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-label"><i class="fas fa-wifi"></i> IP</div>
+                    <div class="status-value" id="statusIP">--</div>
+                    <div class="status-sub">Porta: <span id="statusPort">--</span></div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label"><i class="fas fa-clock"></i> Última Atualização</div>
+                    <div class="status-value" id="statusTime">--</div>
+                    <div class="status-sub" id="statusDate">--</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label"><i class="fas fa-file"></i> Arquivos</div>
+                    <div class="status-value" id="statusFiles">0</div>
+                    <div class="status-sub">
+                        <span id="statusVideos">0 🎬</span>
+                        <span id="statusMusicas">0 🎵</span>
+                        <span id="statusImagens">0 🖼️</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label"><i class="fas fa-qrcode"></i> Acesso</div>
+                    <div class="status-value" id="statusUrl">--</div>
+                    <button class="btn btn-sm btn-primary" onclick="copiarUrlStatus()" style="margin-top:8px;width:100%;">
+                        <i class="fas fa-copy"></i> Copiar IP
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- TABS -->
         <div class="tabs">
@@ -332,6 +486,7 @@
         let videoAtual = null;
         let audioAtual = null;
         let audioTocando = false;
+        let statusInterval = null;
 
         // =============================================
         // INICIALIZAR
@@ -343,12 +498,104 @@
                 const data = await res.json();
                 document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0,8);
                 await carregarArquivos();
+                await carregarStatus();
                 configurarEventos();
+                iniciarStatusAutomatico();
                 console.log('✅ ConexZ inicializado!');
             } catch(e) {
                 console.error('❌ Erro:', e);
                 mostrarStatus('Erro ao inicializar', 'error');
             }
+        }
+
+        // =============================================
+        // STATUS
+        // =============================================
+
+        async function carregarStatus() {
+            try {
+                const res = await fetch('/api/status-completo');
+                const data = await res.json();
+                
+                document.getElementById('statusIP').textContent = data.ip;
+                document.getElementById('statusPort').textContent = data.port;
+                document.getElementById('statusTime').textContent = data.hora;
+                document.getElementById('statusDate').textContent = data.data;
+                document.getElementById('statusFiles').textContent = data.arquivos;
+                document.getElementById('statusVideos').textContent = data.videos + ' 🎬';
+                document.getElementById('statusMusicas').textContent = data.musicas + ' 🎵';
+                document.getElementById('statusImagens').textContent = data.imagens + ' 🖼️';
+                
+                const url = `http://${data.ip}:${data.port}`;
+                document.getElementById('statusUrl').textContent = url;
+                
+                const badge = document.getElementById('statusBadge');
+                if (data.status === 'online') {
+                    badge.textContent = '🟢 Online';
+                    badge.className = 'status-badge';
+                } else {
+                    badge.textContent = '🔴 Offline';
+                    badge.className = 'status-badge offline';
+                }
+            } catch(e) {
+                console.error('❌ Erro ao carregar status:', e);
+            }
+        }
+
+        function atualizarStatus() {
+            carregarStatus();
+            mostrarStatus('🔄 Status atualizado!', 'info');
+        }
+
+        function copiarUrlStatus() {
+            const url = document.getElementById('statusUrl').textContent;
+            if (url && url !== '--') {
+                navigator.clipboard.writeText(url).then(() => {
+                    mostrarStatus('✅ URL copiada!', 'success');
+                }).catch(() => {
+                    prompt('Copie a URL:', url);
+                });
+            }
+        }
+
+        function iniciarStatusAutomatico() {
+            if (statusInterval) clearInterval(statusInterval);
+            statusInterval = setInterval(carregarStatus, 30000);
+        }
+
+        // =============================================
+        // IP
+        // =============================================
+
+        async function detectarIP() {
+            try {
+                const res = await fetch('/api/device');
+                const data = await res.json();
+                
+                const ipDisplay = document.getElementById('ipDisplay');
+                const ipAddress = document.getElementById('ipAddress');
+                const ipPort = document.getElementById('ipPort');
+                
+                ipAddress.textContent = data.ip;
+                ipPort.textContent = data.port;
+                ipDisplay.classList.add('active');
+                
+                mostrarStatus(`📡 IP: ${data.ip}:${data.port}`, 'info');
+            } catch(e) {
+                mostrarStatus('❌ Erro ao detectar IP', 'error');
+            }
+        }
+
+        function copiarIP() {
+            const ip = document.getElementById('ipAddress').textContent;
+            const port = document.getElementById('ipPort').textContent;
+            const url = `http://${ip}:${port}`;
+            
+            navigator.clipboard.writeText(url).then(() => {
+                mostrarStatus('✅ IP copiado!', 'success');
+            }).catch(() => {
+                prompt('Copie o IP:', url);
+            });
         }
 
         // =============================================
@@ -373,6 +620,9 @@
 
             // QR CODE
             document.getElementById('qrBtn').addEventListener('click', gerarQR);
+
+            // IP
+            document.getElementById('ipBtn').addEventListener('click', detectarIP);
 
             // REFRESH
             document.getElementById('refreshBtn').addEventListener('click', carregarArquivos);
@@ -438,10 +688,12 @@
             // SOCKET
             socket.on('new_file', () => {
                 carregarArquivos();
+                carregarStatus();
                 mostrarStatus('📄 Novo arquivo recebido!', 'success');
             });
             socket.on('file_deleted', () => {
                 carregarArquivos();
+                carregarStatus();
             });
 
             // FECHAR MODAIS
@@ -495,6 +747,7 @@
                     if(xhr.status === 200) {
                         mostrarStatus('✅ Arquivo enviado com sucesso!', 'success');
                         carregarArquivos();
+                        carregarStatus();
                     } else {
                         mostrarStatus('❌ Erro ao enviar', 'error');
                     }
@@ -737,6 +990,7 @@
                 await fetch('/api/delete/' + id, { method: 'DELETE' });
                 mostrarStatus('🗑️ Arquivo deletado', 'success');
                 carregarArquivos();
+                carregarStatus();
             } catch(e) {
                 mostrarStatus('❌ Erro ao deletar', 'error');
             }
@@ -813,12 +1067,21 @@
         window.fecharQR = fecharQR;
         window.copiarLink = copiarLink;
         window.mudarTema = mudarTema;
+        window.detectarIP = detectarIP;
+        window.copiarIP = copiarIP;
+        window.atualizarStatus = atualizarStatus;
+        window.copiarUrlStatus = copiarUrlStatus;
 
         // =============================================
         // INICIAR
         // =============================================
 
         document.addEventListener('DOMContentLoaded', init);
+
+        // Limpar intervalos ao sair
+        window.addEventListener('beforeunload', function() {
+            if (statusInterval) clearInterval(statusInterval);
+        });
     </script>
 </body>
 </html>

@@ -7,6 +7,7 @@ let currentVideoId = null;
 let currentAudio = null;
 let isAudioPlaying = false;
 let currentTheme = '#00d4ff';
+let statusInterval = null;
 
 // ==========================================
 // INICIALIZAÇÃO
@@ -19,27 +20,116 @@ async function init() {
         // Pegar ID do dispositivo
         const res = await fetch('/api/device');
         const data = await res.json();
-        document.getElementById('deviceIdText').textContent = data.id.substring(0, 8);
+        document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0, 8);
         
         // Carregar dados
-        await Promise.all([
-            loadFiles(),
-            loadVideos(),
-            loadMusic(),
-            loadImages(),
-            loadStats()
-        ]);
+        await carregarStatus();
+        await loadFiles();
+        await loadVideos();
+        await loadMusic();
+        await loadImages();
         
         // Configurar eventos
         setupEvents();
         
-        // Atualizar contador
-        updateFileCount();
+        // Iniciar atualização automática de status
+        iniciarStatusAutomatico();
         
         console.log('✅ ConexZ inicializado com sucesso!');
     } catch (error) {
         console.error('❌ Erro na inicialização:', error);
+        mostrarStatus('Erro ao inicializar', 'error');
     }
+}
+
+// ==========================================
+// STATUS
+// ==========================================
+
+async function carregarStatus() {
+    try {
+        const res = await fetch('/api/status-completo');
+        const data = await res.json();
+        
+        document.getElementById('statusIP').textContent = data.ip;
+        document.getElementById('statusPort').textContent = data.port;
+        document.getElementById('statusTime').textContent = data.hora;
+        document.getElementById('statusDate').textContent = data.data;
+        document.getElementById('statusFiles').textContent = data.arquivos;
+        document.getElementById('statusVideos').textContent = data.videos + ' 🎬';
+        document.getElementById('statusMusicas').textContent = data.musicas + ' 🎵';
+        document.getElementById('statusImagens').textContent = data.imagens + ' 🖼️';
+        
+        const url = `http://${data.ip}:${data.port}`;
+        document.getElementById('statusUrl').textContent = url;
+        
+        const badge = document.getElementById('statusBadge');
+        if (data.status === 'online') {
+            badge.textContent = '🟢 Online';
+            badge.className = 'status-badge';
+        } else {
+            badge.textContent = '🔴 Offline';
+            badge.className = 'status-badge offline';
+        }
+    } catch(e) {
+        console.error('❌ Erro ao carregar status:', e);
+    }
+}
+
+function atualizarStatus() {
+    carregarStatus();
+    mostrarStatus('🔄 Status atualizado!', 'info');
+}
+
+function copiarUrlStatus() {
+    const url = document.getElementById('statusUrl').textContent;
+    if (url && url !== '--') {
+        navigator.clipboard.writeText(url).then(() => {
+            mostrarStatus('✅ URL copiada!', 'success');
+        }).catch(() => {
+            prompt('Copie a URL:', url);
+        });
+    }
+}
+
+function iniciarStatusAutomatico() {
+    if (statusInterval) clearInterval(statusInterval);
+    statusInterval = setInterval(carregarStatus, 30000);
+}
+
+// ==========================================
+// IP
+// ==========================================
+
+async function detectarIP() {
+    try {
+        const res = await fetch('/api/device');
+        const data = await res.json();
+        
+        const ipDisplay = document.getElementById('ipDisplay');
+        const ipAddress = document.getElementById('ipAddress');
+        const ipPort = document.getElementById('ipPort');
+        
+        ipAddress.textContent = data.ip;
+        ipPort.textContent = data.port;
+        ipDisplay.classList.add('active');
+        
+        mostrarStatus(`📡 IP: ${data.ip}:${data.port}`, 'info');
+    } catch(e) {
+        mostrarStatus('❌ Erro ao detectar IP', 'error');
+    }
+}
+
+function copiarIP() {
+    const ip = document.getElementById('ipAddress').textContent;
+    const port = document.getElementById('ipPort').textContent;
+    const url = `http://${ip}:${port}`;
+    
+    navigator.clipboard.writeText(url).then(() => {
+        mostrarStatus('✅ IP copiado!', 'success');
+    }).catch(() => {
+        prompt('Copie o IP:', url);
+    });
 }
 
 // ==========================================
@@ -47,10 +137,10 @@ async function init() {
 // ==========================================
 
 function setupEvents() {
-    // --- NAVEGAÇÃO ---
-    document.querySelectorAll('.sidebar nav ul li').forEach(item => {
+    // --- TABS ---
+    document.querySelectorAll('.tab').forEach(item => {
         item.addEventListener('click', function() {
-            document.querySelectorAll('.sidebar nav ul li').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(i => i.classList.remove('active'));
             this.classList.add('active');
             
             const tab = this.dataset.tab;
@@ -58,11 +148,9 @@ function setupEvents() {
             const target = document.getElementById(`tab-${tab}`);
             if (target) target.classList.add('active');
             
-            // Carregar conteúdo específico
             if (tab === 'videos') loadVideos();
             if (tab === 'music') loadMusic();
             if (tab === 'images') loadImages();
-            if (tab === 'stats') loadStats();
         });
     });
     
@@ -98,16 +186,22 @@ function setupEvents() {
     }
     
     // --- QR CODE ---
-    document.getElementById('qrBtn').addEventListener('click', generateQR);
+    document.getElementById('qrBtn').addEventListener('click', gerarQR);
+    
+    // --- IP ---
+    document.getElementById('ipBtn').addEventListener('click', detectarIP);
     
     // --- ATUALIZAR ---
-    document.getElementById('refreshFiles').addEventListener('click', () => {
+    document.getElementById('refreshBtn').addEventListener('click', () => {
         loadFiles();
-        updateFileCount();
+        loadVideos();
+        loadMusic();
+        loadImages();
+        carregarStatus();
     });
     
     // --- BUSCAR ---
-    document.getElementById('searchFile').addEventListener('input', filterFiles);
+    document.getElementById('searchInput').addEventListener('input', filterFiles);
     
     // --- MODO ESCURO ---
     document.getElementById('darkMode').addEventListener('change', function() {
@@ -118,8 +212,8 @@ function setupEvents() {
             document.documentElement.style.setProperty('--bg-hover', '#dce3ea');
             document.documentElement.style.setProperty('--text-primary', '#1a202c');
             document.documentElement.style.setProperty('--text-secondary', '#4a5568');
-            document.documentElement.style.setProperty('--border', '#cbd5e0');
             document.documentElement.style.setProperty('--text-muted', '#718096');
+            document.documentElement.style.setProperty('--border', '#cbd5e0');
         } else {
             document.documentElement.style.setProperty('--bg-primary', '#0a0a1a');
             document.documentElement.style.setProperty('--bg-secondary', '#12122a');
@@ -127,8 +221,8 @@ function setupEvents() {
             document.documentElement.style.setProperty('--bg-hover', '#252550');
             document.documentElement.style.setProperty('--text-primary', '#ffffff');
             document.documentElement.style.setProperty('--text-secondary', '#a0aec0');
-            document.documentElement.style.setProperty('--border', '#2a2a5a');
             document.documentElement.style.setProperty('--text-muted', '#6a7a8e');
+            document.documentElement.style.setProperty('--border', '#2a2a5a');
         }
     });
     
@@ -141,12 +235,28 @@ function setupEvents() {
             const color = this.dataset.color;
             currentTheme = color;
             document.documentElement.style.setProperty('--accent', color);
+            
+            // Atualizar elementos com a nova cor
+            document.querySelectorAll('.btn-primary').forEach(b => {
+                b.style.background = color;
+            });
+            document.querySelectorAll('.tab.active').forEach(t => {
+                t.style.background = color;
+                t.style.borderColor = color;
+            });
+            document.querySelectorAll('.badge').forEach(b => {
+                b.style.background = color;
+            });
+            document.querySelectorAll('.logo-icon').forEach(l => {
+                l.style.background = color;
+            });
         });
     });
     
     // --- SOCKET ---
     socket.on('connect', () => {
         console.log('🔌 Conectado ao servidor');
+        mostrarStatus('Conectado ao servidor', 'success');
     });
     
     socket.on('new_file', (data) => {
@@ -155,9 +265,8 @@ function setupEvents() {
         loadVideos();
         loadMusic();
         loadImages();
-        loadStats();
-        updateFileCount();
-        showStatus(`📄 ${data.name} recebido!`, 'success');
+        carregarStatus();
+        mostrarStatus(`📄 ${data.name} recebido!`, 'success');
     });
     
     socket.on('file_deleted', () => {
@@ -165,8 +274,7 @@ function setupEvents() {
         loadVideos();
         loadMusic();
         loadImages();
-        loadStats();
-        updateFileCount();
+        carregarStatus();
     });
     
     // --- AUDIO PROGRESS ---
@@ -178,6 +286,22 @@ function setupEvents() {
             }
         });
     }
+    
+    // --- FECHAR MODAIS ---
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeVideoPlayer();
+            fecharQR();
+            closeAudioPlayer();
+        }
+    });
+    
+    document.getElementById('videoModal').addEventListener('click', function(e) {
+        if (e.target === this) closeVideoPlayer();
+    });
+    document.getElementById('qrModal').addEventListener('click', function(e) {
+        if (e.target === this) fecharQR();
+    });
 }
 
 // ==========================================
@@ -192,7 +316,7 @@ async function uploadFiles(files) {
         formData.append('file', file);
     }
     
-    const progressBar = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressContainer');
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
     
@@ -200,7 +324,7 @@ async function uploadFiles(files) {
     progressFill.style.width = '0%';
     progressText.textContent = '0%';
     
-    showStatus('⏳ Enviando...', 'info');
+    mostrarStatus('⏳ Enviando...', 'info');
     
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/upload');
@@ -216,21 +340,20 @@ async function uploadFiles(files) {
     xhr.onload = () => {
         progressBar.style.display = 'none';
         if (xhr.status === 200) {
-            showStatus('✅ Arquivo enviado com sucesso!', 'success');
+            mostrarStatus('✅ Arquivo enviado com sucesso!', 'success');
             loadFiles();
             loadVideos();
             loadMusic();
             loadImages();
-            loadStats();
-            updateFileCount();
+            carregarStatus();
         } else {
-            showStatus('❌ Erro ao enviar arquivo', 'error');
+            mostrarStatus('❌ Erro ao enviar arquivo', 'error');
         }
     };
     
     xhr.onerror = () => {
         progressBar.style.display = 'none';
-        showStatus('❌ Erro de conexão', 'error');
+        mostrarStatus('❌ Erro de conexão', 'error');
     };
     
     xhr.send(formData);
@@ -245,8 +368,10 @@ async function loadFiles() {
         const res = await fetch('/api/files');
         const files = await res.json();
         renderFiles(files);
+        document.getElementById('fileCount').textContent = files.length;
     } catch (error) {
         console.error('❌ Erro ao carregar arquivos:', error);
+        mostrarStatus('Erro ao carregar arquivos', 'error');
     }
 }
 
@@ -266,25 +391,25 @@ function renderFiles(files) {
     }
     
     container.innerHTML = files.map(file => `
-        <div class="file-item" data-id="${file.id}">
+        <div class="file-item" data-id="${file.id}" data-name="${file.name.toLowerCase()}">
             <div class="file-info">
-                <i class="${getIcon(file.type)}"></i>
+                <i class="${getIcon(file.name)}"></i>
                 <div class="file-details">
                     <div class="file-name">${file.name}</div>
-                    <div class="file-meta">${file.size_formatted} • ${formatDate(file.date)}</div>
+                    <div class="file-meta">${file.size_formatted} • ${file.date}</div>
                 </div>
             </div>
             <div class="file-actions">
-                <button class="btn btn-sm btn-secondary" onclick="viewFile('${file.id}')" title="Visualizar">
+                <button class="btn btn-sm btn-secondary" onclick="visualizarArquivo('${file.id}')" title="Visualizar">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button class="btn btn-sm btn-secondary" onclick="downloadFile('${file.id}')" title="Baixar">
+                <button class="btn btn-sm btn-secondary" onclick="baixarArquivo('${file.id}')" title="Baixar">
                     <i class="fas fa-download"></i>
                 </button>
-                <button class="btn btn-sm btn-secondary" onclick="shareFile('${file.id}')" title="Compartilhar">
+                <button class="btn btn-sm btn-secondary" onclick="compartilharArquivo('${file.id}')" title="Compartilhar">
                     <i class="fas fa-share-alt"></i>
                 </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteFile('${file.id}')" title="Deletar">
+                <button class="btn btn-sm btn-danger" onclick="deletarArquivo('${file.id}')" title="Deletar">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -293,17 +418,11 @@ function renderFiles(files) {
 }
 
 function filterFiles() {
-    const query = document.getElementById('searchFile').value.toLowerCase();
+    const query = document.getElementById('searchInput').value.toLowerCase();
     document.querySelectorAll('.file-item').forEach(item => {
-        const name = item.querySelector('.file-name').textContent.toLowerCase();
+        const name = item.dataset.name || '';
         item.style.display = name.includes(query) ? 'flex' : 'none';
     });
-}
-
-function updateFileCount() {
-    const count = document.querySelectorAll('.file-item').length;
-    const badge = document.querySelector('[data-tab="files"] .badge');
-    if (badge) badge.textContent = count;
 }
 
 // ==========================================
@@ -312,15 +431,12 @@ function updateFileCount() {
 
 async function loadVideos() {
     try {
-        const res = await fetch('/api/files/video');
-        const videos = await res.json();
-        renderVideos(videos);
-    } catch {
-        // Fallback: filtrar todos os arquivos
         const res = await fetch('/api/files');
         const files = await res.json();
-        const videos = files.filter(f => f.type === 'video');
+        const videos = files.filter(f => f.name.match(/\.(mp4|webm|mov|mkv|avi)$/i));
         renderVideos(videos);
+    } catch (error) {
+        console.error('❌ Erro ao carregar vídeos:', error);
     }
 }
 
@@ -330,7 +446,7 @@ function renderVideos(videos) {
     
     if (videos.length === 0) {
         grid.innerHTML = `
-            <div class="empty-state">
+            <div class="empty-state" style="grid-column:1/-1;">
                 <i class="fas fa-play-circle fa-4x"></i>
                 <h3>Nenhum vídeo</h3>
                 <p>Envie um vídeo MP4 para assistir</p>
@@ -346,7 +462,7 @@ function renderVideos(videos) {
             </video>
             <div class="media-info">
                 <div class="media-title">${v.name}</div>
-                <div class="media-meta">${v.size}</div>
+                <div class="media-meta">${v.size_formatted}</div>
             </div>
         </div>
     `).join('');
@@ -371,18 +487,13 @@ function closeVideoPlayer() {
     modal.classList.remove('active');
 }
 
-function downloadCurrentVideo() {
-    if (currentVideoId) downloadFile(currentVideoId);
+function baixarVideo() {
+    if (currentVideoId) baixarArquivo(currentVideoId);
 }
 
-function shareCurrentVideo() {
-    if (currentVideoId) shareFile(currentVideoId);
+function compartilharVideo() {
+    if (currentVideoId) compartilharArquivo(currentVideoId);
 }
-
-// Fechar vídeo com ESC
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeVideoPlayer();
-});
 
 // ==========================================
 // MÚSICAS
@@ -390,14 +501,12 @@ document.addEventListener('keydown', (e) => {
 
 async function loadMusic() {
     try {
-        const res = await fetch('/api/files/audio');
-        const music = await res.json();
-        renderMusic(music);
-    } catch {
         const res = await fetch('/api/files');
         const files = await res.json();
-        const music = files.filter(f => f.type === 'audio');
+        const music = files.filter(f => f.name.match(/\.(mp3|wav|ogg|flac|m4a)$/i));
         renderMusic(music);
+    } catch (error) {
+        console.error('❌ Erro ao carregar músicas:', error);
     }
 }
 
@@ -407,7 +516,7 @@ function renderMusic(music) {
     
     if (music.length === 0) {
         grid.innerHTML = `
-            <div class="empty-state">
+            <div class="empty-state" style="grid-column:1/-1;">
                 <i class="fas fa-music fa-4x"></i>
                 <h3>Nenhuma música</h3>
                 <p>Envie uma música MP3 para ouvir</p>
@@ -423,7 +532,7 @@ function renderMusic(music) {
             </div>
             <div class="media-info">
                 <div class="media-title">${m.name}</div>
-                <div class="media-meta">${m.size}</div>
+                <div class="media-meta">${m.size_formatted}</div>
             </div>
         </div>
     `).join('');
@@ -440,25 +549,25 @@ function playAudio(fileId) {
         .then(files => {
             const file = files.find(f => f.id === fileId);
             if (file) {
-                document.getElementById('audioTitle').textContent = file.name;
+                document.getElementById('audioTitle').textContent = '🎵 ' + file.name;
             }
         });
     
     currentAudio = new Audio(`/api/view/${fileId}`);
     
     currentAudio.addEventListener('loadedmetadata', () => {
-        document.getElementById('audioDuration').textContent = formatTime(currentAudio.duration);
+        document.getElementById('audioDuration').textContent = formatTempo(currentAudio.duration);
         document.getElementById('audioProgress').max = currentAudio.duration;
     });
     
     currentAudio.addEventListener('timeupdate', () => {
-        document.getElementById('audioCurrentTime').textContent = formatTime(currentAudio.currentTime);
+        document.getElementById('audioCurrentTime').textContent = formatTempo(currentAudio.currentTime);
         document.getElementById('audioProgress').value = currentAudio.currentTime;
     });
     
     currentAudio.addEventListener('ended', closeAudioPlayer);
     currentAudio.addEventListener('error', () => {
-        showStatus('❌ Erro ao tocar música', 'error');
+        mostrarStatus('❌ Erro ao tocar música', 'error');
     });
     
     document.getElementById('audioPlayer').style.display = 'block';
@@ -469,7 +578,7 @@ function playAudio(fileId) {
             updateAudioButton();
         })
         .catch(() => {
-            showStatus('❌ Erro ao tocar música', 'error');
+            mostrarStatus('❌ Erro ao tocar música', 'error');
         });
 }
 
@@ -486,7 +595,7 @@ function toggleAudioPlay() {
 }
 
 function updateAudioButton() {
-    const btn = document.getElementById('audioPlayBtn');
+    const btn = document.getElementById('audioBtn');
     if (!btn) return;
     btn.innerHTML = isAudioPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
 }
@@ -508,14 +617,12 @@ function closeAudioPlayer() {
 
 async function loadImages() {
     try {
-        const res = await fetch('/api/files/image');
-        const images = await res.json();
-        renderImages(images);
-    } catch {
         const res = await fetch('/api/files');
         const files = await res.json();
-        const images = files.filter(f => f.type === 'image');
+        const images = files.filter(f => f.name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i));
         renderImages(images);
+    } catch (error) {
+        console.error('❌ Erro ao carregar imagens:', error);
     }
 }
 
@@ -525,7 +632,7 @@ function renderImages(images) {
     
     if (images.length === 0) {
         grid.innerHTML = `
-            <div class="empty-state">
+            <div class="empty-state" style="grid-column:1/-1;">
                 <i class="fas fa-images fa-4x"></i>
                 <h3>Nenhuma imagem</h3>
                 <p>Envie uma imagem para visualizar</p>
@@ -535,27 +642,155 @@ function renderImages(images) {
     }
     
     grid.innerHTML = images.map(img => `
-        <div class="media-card" onclick="viewImage('${img.id}')">
+        <div class="media-card" onclick="visualizarArquivo('${img.id}')">
             <div class="media-preview">
-                <img src="/api/view/${img.id}" alt="${img.name}" style="width:100%;height:100%;object-fit:cover;">
+                <i class="fas fa-image" style="font-size:40px;"></i>
             </div>
             <div class="media-info">
                 <div class="media-title">${img.name}</div>
-                <div class="media-meta">${img.size}</div>
+                <div class="media-meta">${img.size_formatted}</div>
             </div>
         </div>
     `).join('');
 }
 
-function viewImage(fileId) {
-    window.open(`/api/view/${fileId}`, '_blank');
+// ==========================================
+// QR CODE
+// ==========================================
+
+async function gerarQR() {
+    const modal = document.getElementById('qrModal');
+    const container = document.getElementById('qrContainer');
+    const urlEl = document.getElementById('qrUrl');
+    modal.classList.add('active');
+    container.innerHTML = '<p style="color:var(--text-secondary);">⏳ Gerando...</p>';
+    
+    try {
+        const deviceRes = await fetch('/api/device');
+        const deviceData = await deviceRes.json();
+        
+        const res = await fetch('/api/qr');
+        const data = await res.json();
+        
+        container.innerHTML = `<img src="data:image/png;base64,${data.qr}">`;
+        urlEl.textContent = `http://${deviceData.ip}:${deviceData.port}`;
+    } catch(e) {
+        container.innerHTML = '<p style="color:#e53e3e;">❌ Erro ao gerar QR Code</p>';
+        urlEl.textContent = window.location.host;
+    }
+}
+
+function fecharQR() {
+    document.getElementById('qrModal').classList.remove('active');
+}
+
+async function copiarLink() {
+    const url = document.getElementById('qrUrl').textContent;
+    await navigator.clipboard.writeText(url);
+    mostrarStatus('✅ Link copiado!', 'success');
 }
 
 // ==========================================
-// ESTATÍSTICAS
+// FUNÇÕES COMPARTILHADAS
 // ==========================================
 
-async function loadStats() {
+function visualizarArquivo(id) {
+    window.open(`/api/view/${id}`, '_blank');
+}
+
+function baixarArquivo(id) {
+    window.location.href = `/api/download/${id}`;
+    mostrarStatus('⬇️ Download iniciado', 'success');
+}
+
+async function compartilharArquivo(id) {
     try {
-        const res = await fetch('/api/stats');
-        const stats
+        const res = await fetch(`/api/share/${id}`);
+        const data = await res.json();
+        await navigator.clipboard.writeText(data.link);
+        mostrarStatus('✅ Link copiado!', 'success');
+        alert(`Link compartilhável:\n${data.link}\n\nVálido por 24 horas`);
+    } catch(e) {
+        mostrarStatus('❌ Erro ao compartilhar', 'error');
+    }
+}
+
+async function deletarArquivo(id) {
+    if (!confirm('Tem certeza que deseja deletar este arquivo?')) return;
+    
+    try {
+        await fetch(`/api/delete/${id}`, { method: 'DELETE' });
+        mostrarStatus('🗑️ Arquivo deletado', 'success');
+        loadFiles();
+        loadVideos();
+        loadMusic();
+        loadImages();
+        carregarStatus();
+    } catch(e) {
+        mostrarStatus('❌ Erro ao deletar', 'error');
+    }
+}
+
+// ==========================================
+// UTILITÁRIOS
+// ==========================================
+
+function getIcon(name) {
+    if (name.match(/\.(mp4|webm|mov|mkv|avi)$/i)) return 'fas fa-play-circle';
+    if (name.match(/\.(mp3|wav|ogg|flac|m4a)$/i)) return 'fas fa-music';
+    if (name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) return 'fas fa-image';
+    if (name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$/i)) return 'fas fa-file-pdf';
+    if (name.match(/\.(zip|rar|7z|tar|gz)$/i)) return 'fas fa-file-archive';
+    return 'fas fa-file';
+}
+
+function formatTempo(segundos) {
+    if (!segundos || isNaN(segundos)) return '0:00';
+    const m = Math.floor(segundos / 60);
+    const s = Math.floor(segundos % 60);
+    return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function mostrarStatus(msg, tipo) {
+    const el = document.getElementById('status');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'status ' + tipo;
+    el.style.display = 'block';
+    clearTimeout(el._timeout);
+    el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// ==========================================
+// EXPORTAR FUNÇÕES
+// ==========================================
+
+window.playVideo = playVideo;
+window.closeVideoPlayer = closeVideoPlayer;
+window.baixarVideo = baixarVideo;
+window.compartilharVideo = compartilharVideo;
+window.playAudio = playAudio;
+window.toggleAudioPlay = toggleAudioPlay;
+window.closeAudioPlayer = closeAudioPlayer;
+window.visualizarArquivo = visualizarArquivo;
+window.baixarArquivo = baixarArquivo;
+window.compartilharArquivo = compartilharArquivo;
+window.deletarArquivo = deletarArquivo;
+window.gerarQR = gerarQR;
+window.fecharQR = fecharQR;
+window.copiarLink = copiarLink;
+window.detectarIP = detectarIP;
+window.copiarIP = copiarIP;
+window.atualizarStatus = atualizarStatus;
+window.copiarUrlStatus = copiarUrlStatus;
+
+// ==========================================
+// INICIAR
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', init);
+
+// Limpar intervalos ao sair
+window.addEventListener('beforeunload', function() {
+    if (statusInterval) clearInterval(statusInterval);
+});
