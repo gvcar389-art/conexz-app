@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ConexZ - Transferência Inteligente</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --bg-primary: #0a0a1a;
+            --bg-secondary: #12122a;
+            --bg-card: #1a1a3e;
+            --bg-hover: #252550;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --text-muted: #6a7a8e;
+            --accent: #00d4ff;
+            --border: #2a2a5a;
+            --shadow: 0 8px 32px rgba(0,0,0,0.4);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        /* HEADER */
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--bg-secondary); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 24px; box-shadow: var(--shadow); flex-wrap: wrap; gap: 12px; }
+        .logo { display: flex; align-items: center; gap: 16px; }
+        .logo-icon { width: 48px; height: 48px; background: var(--accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; }
+        .logo h1 { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, var(--accent), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .subtitle { font-size: 12px; color: var(--text-secondary); font-weight: 400; -webkit-text-fill-color: var(--text-secondary); }
+        
+        .header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .device-badge { background: var(--bg-card); padding: 8px 16px; border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid var(--border); }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-family: inherit; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3); }
+        .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-hover); }
+        .btn-danger { background: #e53e3e; color: #fff; }
+        .btn-danger:hover { background: #c53030; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        
+        /* TABS */
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; border-radius: 12px; cursor: pointer; background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary); transition: var(--transition); font-size: 14px; font-weight: 500; }
+        .tab:hover { border-color: var(--accent); color: #fff; }
+        .tab.active { background: var(--accent); border-color: var(--accent); color: #0a0a1a; font-weight: 600; }
+        .badge { background: var(--accent); color: #0a0a1a; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+        
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-content h2 { margin-bottom: 24px; font-weight: 600; display: flex; align-items: center; gap: 12px; font-size: 20px; }
+        .tab-content h2 i { color: var(--accent); }
+        
+        /* UPLOAD */
+        .upload-area { border: 3px dashed var(--border); border-radius: var(--radius); padding: 60px 40px; text-align: center; cursor: pointer; transition: var(--transition); background: var(--bg-primary); }
+        .upload-area:hover { border-color: var(--accent); background: var(--bg-card); }
+        .upload-area.dragover { border-color: var(--accent); background: var(--bg-card); transform: scale(1.02); }
+        .upload-icon i { font-size: 56px; color: var(--accent); margin-bottom: 16px; }
+        .upload-area h3 { font-size: 20px; margin-bottom: 8px; }
+        .upload-area p { color: var(--text-secondary); margin-bottom: 12px; }
+        .upload-area input { display: none; }
+        .upload-info { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+        
+        .progress-container { margin-top: 20px; display: flex; align-items: center; gap: 16px; }
+        .progress-bar { flex: 1; height: 6px; background: var(--border); border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; border-radius: 10px; }
+        #progressText { font-size: 14px; color: var(--text-secondary); min-width: 40px; }
+        
+        /* FILE LIST */
+        .file-toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .search-box { flex: 1; display: flex; align-items: center; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px; padding: 0 16px; transition: var(--transition); min-width: 150px; }
+        .search-box:focus-within { border-color: var(--accent); }
+        .search-box i { color: var(--text-muted); font-size: 14px; }
+        .search-box input { background: transparent; border: none; padding: 12px 12px; color: var(--text-primary); font-size: 14px; font-family: inherit; flex: 1; outline: none; }
+        
+        .file-list { display: grid; gap: 10px; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border); transition: var(--transition); flex-wrap: wrap; gap: 8px; }
+        .file-item:hover { transform: translateX(4px); border-color: var(--accent); }
+        .file-info { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 150px; }
+        .file-info i { font-size: 24px; color: var(--accent); width: 32px; text-align: center; }
+        .file-details { flex: 1; min-width: 0; }
+        .file-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-meta { font-size: 12px; color: var(--text-secondary); }
+        .file-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+        
+        /* MEDIA GRID */
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; padding-top: 8px; }
+        .media-card { background: var(--bg-primary); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); transition: var(--transition); cursor: pointer; }
+        .media-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+        .media-preview { width: 100%; height: 120px; background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--accent); }
+        .media-card video { width: 100%; height: 120px; object-fit: cover; background: #000; }
+        .media-info { padding: 12px 16px; }
+        .media-title { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .media-meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        
+        /* MODALS */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-secondary); padding: 32px 40px; border-radius: var(--radius); width: 90%; max-width: 450px; border: 1px solid var(--border); text-align: center; position: relative; }
+        .modal-content .close { position: absolute; top: 12px; right: 16px; font-size: 24px; cursor: pointer; color: var(--text-secondary); transition: var(--transition); background: none; border: none; }
+        .modal-content .close:hover { color: #fff; transform: rotate(90deg); }
+        .modal-content h2 { margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .qr-container img { max-width: 220px; border-radius: 12px; border: 3px solid var(--accent); }
+        .qr-url { font-size: 12px; color: var(--accent); background: var(--bg-primary); padding: 8px 12px; border-radius: 8px; margin: 8px 0 16px; word-break: break-all; }
+        
+        .video-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
+        .video-modal.active { display: flex; }
+        .video-modal-content { width: 90%; max-width: 900px; position: relative; }
+        .video-modal-content video { width: 100%; border-radius: var(--radius); background: #000; max-height: 80vh; }
+        .video-close { position: absolute; top: -50px; right: 0; background: none; border: none; color: #fff; font-size: 30px; cursor: pointer; transition: var(--transition); }
+        .video-close:hover { transform: rotate(90deg); color: var(--accent); }
+        .video-actions { display: flex; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+        
+        .audio-player { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); border: 1px solid var(--accent); border-radius: var(--radius); padding: 12px 20px; z-index: 999; box-shadow: 0 8px 40px rgba(0,212,255,0.15); min-width: 350px; max-width: 600px; animation: slideUp 0.4s ease; display: none; }
+        @keyframes slideUp { from { transform: translateX(-50%) translateY(80px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        .audio-player-content { display: flex; align-items: center; gap: 12px; }
+        .audio-info { flex: 1; min-width: 80px; }
+        .audio-title { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .audio-controls { display: flex; align-items: center; gap: 8px; flex: 2; }
+        .audio-btn { background: none; border: none; color: #fff; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; transition: var(--transition); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+        .audio-btn:hover { background: var(--accent); color: #0a0a1a; }
+        .audio-btn.audio-close:hover { background: #e53e3e; color: #fff; }
+        .audio-progress { flex: 1; height: 4px; -webkit-appearance: none; background: var(--border); border-radius: 4px; outline: none; min-width: 60px; }
+        .audio-progress::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+        .audio-time { display: flex; gap: 6px; font-size: 11px; color: var(--text-secondary); min-width: 60px; }
+        
+        .status { padding: 12px 16px; border-radius: 12px; margin-top: 12px; display: none; font-size: 14px; }
+        .status.success { display: block; background: rgba(72,187,120,0.15); border: 1px solid #48bb78; color: #48bb78; }
+        .status.error { display: block; background: rgba(229,62,62,0.15); border: 1px solid #fc8181; color: #fc8181; }
+        .status.info { display: block; background: rgba(0,212,255,0.15); border: 1px solid var(--accent); color: var(--accent); }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+        .empty-state i { font-size: 48px; color: var(--accent); margin-bottom: 16px; }
+        
+        /* SETTINGS */
+        .setting-card { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; flex-wrap: wrap; gap: 12px; }
+        .setting-card .info h3 { font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .setting-card .info p { font-size: 12px; color: var(--text-secondary); }
+        
+        .toggle { position: relative; width: 48px; height: 28px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle label { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 28px; transition: var(--transition); }
+        .toggle label:before { content: ""; position: absolute; height: 20px; width: 20px; left: 4px; bottom: 4px; background: #fff; border-radius: 50%; transition: var(--transition); }
+        .toggle input:checked + label { background: var(--accent); }
+        .toggle input:checked + label:before { transform: translateX(20px); }
+        
+        .theme-selector { display: flex; gap: 8px; flex-wrap: wrap; }
+        .theme-btn { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: var(--transition); }
+        .theme-btn:hover { transform: scale(1.1); }
+        .theme-btn.active { border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+        
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .container { padding: 12px; }
+            header { flex-direction: column; text-align: center; }
+            .tabs { gap: 4px; justify-content: center; }
+            .tab { font-size: 12px; padding: 8px 14px; }
+            .file-item { flex-direction: column; align-items: stretch; }
+            .file-actions { justify-content: flex-end; }
+            .media-grid { grid-template-columns: repeat(2, 1fr); }
+            .audio-player { min-width: 90%; bottom: 12px; padding: 10px 14px; }
+            .audio-player-content { flex-wrap: wrap; gap: 8px; }
+            .audio-info { min-width: 100%; text-align: center; }
+            .audio-controls { width: 100%; }
+            .modal-content { padding: 20px; }
+        }
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .upload-area { padding: 30px 16px; }
+            .media-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <div>
+                    <h1>ConexZ</h1>
+                    <span class="subtitle">Transferência Inteligente</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="device-badge" id="deviceId"><i class="fas fa-qrcode"></i> ID: ...</span>
+                <button class="btn btn-primary" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</button>
+            </div>
+        </header>
+
+        <!-- TABS -->
+        <div class="tabs">
+            <div class="tab active" data-tab="upload">📤 Upload</div>
+            <div class="tab" data-tab="files">📁 Arquivos <span class="badge" id="fileCount">0</span></div>
+            <div class="tab" data-tab="videos">🎬 Vídeos</div>
+            <div class="tab" data-tab="music">🎵 Músicas</div>
+            <div class="tab" data-tab="images">🖼️ Imagens</div>
+            <div class="tab" data-tab="settings">⚙️ Config</div>
+        </div>
+
+        <!-- TAB UPLOAD -->
+        <div class="tab-content active" id="tab-upload">
+            <h2><i class="fas fa-cloud-upload-alt"></i> Enviar Arquivo</h2>
+            <div class="upload-area" id="dropZone">
+                <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <h3>Arraste seus arquivos aqui</h3>
+                <p>ou clique para selecionar</p>
+                <input type="file" id="fileInput" multiple>
+                <div class="upload-info">📦 Suporta: MP4, MP3, JPG, PNG, PDF e mais</div>
+                <div class="progress-container" id="progressContainer" style="display:none">
+                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                    <span id="progressText">0%</span>
+                </div>
+            </div>
+            <div id="status" class="status"></div>
+        </div>
+
+        <!-- TAB ARQUIVOS -->
+        <div class="tab-content" id="tab-files">
+            <h2><i class="fas fa-folder"></i> Meus Arquivos</h2>
+            <div class="file-toolbar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Buscar arquivo...">
+                </div>
+                <button class="btn btn-secondary" id="refreshBtn"><i class="fas fa-sync"></i></button>
+            </div>
+            <div id="fileList"></div>
+        </div>
+
+        <!-- TAB VÍDEOS -->
+        <div class="tab-content" id="tab-videos">
+            <h2><i class="fas fa-play-circle"></i> Meus Vídeos</h2>
+            <div id="videoGrid" class="media-grid"></div>
+        </div>
+
+        <!-- TAB MÚSICAS -->
+        <div class="tab-content" id="tab-music">
+            <h2><i class="fas fa-music"></i> Minhas Músicas</h2>
+            <div id="musicGrid" class="media-grid"></div>
+        </div>
+
+        <!-- TAB IMAGENS -->
+        <div class="tab-content" id="tab-images">
+            <h2><i class="fas fa-images"></i> Minhas Imagens</h2>
+            <div id="imageGrid" class="media-grid"></div>
+        </div>
+
+        <!-- TAB CONFIG -->
+        <div class="tab-content" id="tab-settings">
+            <h2><i class="fas fa-cog"></i> Configurações</h2>
+            <div class="setting-card">
+                <div class="info"><h3><i class="fas fa-moon"></i> Modo Escuro</h3><p>Ative o modo escuro</p></div>
+                <div class="toggle"><input type="checkbox" id="darkMode"><label for="darkMode"></label></div>
+            </div>
+            <div class="setting-card">
+                <div class="info"><h3><i class="fas fa-palette"></i> Tema de Cores</h3><p>Escolha a cor principal</p></div>
+                <div class="theme-selector">
+                    <button class="theme-btn active" data-color="#00d4ff" style="background:#00d4ff" onclick="mudarTema('#00d4ff', this)"></button>
+                    <button class="theme-btn" data-color="#6C63FF" style="background:#6C63FF" onclick="mudarTema('#6C63FF', this)"></button>
+                    <button class="theme-btn" data-color="#FF6B6B" style="background:#FF6B6B" onclick="mudarTema('#FF6B6B', this)"></button>
+                    <button class="theme-btn" data-color="#FFD93D" style="background:#FFD93D" onclick="mudarTema('#FFD93D', this)"></button>
+                    <button class="theme-btn" data-color="#6BCB77" style="background:#6BCB77" onclick="mudarTema('#6BCB77', this)"></button>
+                </div>
+            </div>
+            <div class="setting-card">
+                <div class="info"><h3><i class="fas fa-hdd"></i> Armazenamento</h3><p>Arquivos salvos localmente</p></div>
+                <span style="color:#48bb78;font-size:12px;">✅ Seguro</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLAYER VÍDEO -->
+    <div class="video-modal" id="videoModal">
+        <div class="video-modal-content">
+            <button class="video-close" onclick="fecharVideo()">✕</button>
+            <video id="videoPlayer" controls></video>
+            <div class="video-actions">
+                <button class="btn btn-primary" onclick="baixarVideo()"><i class="fas fa-download"></i> Baixar</button>
+                <button class="btn btn-secondary" onclick="compartilharVideo()"><i class="fas fa-share-alt"></i> Compartilhar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLAYER ÁUDIO -->
+    <div class="audio-player" id="audioPlayer">
+        <div class="audio-player-content">
+            <div class="audio-info">
+                <div class="audio-title" id="audioTitle">🎵 Música</div>
+            </div>
+            <div class="audio-controls">
+                <button class="audio-btn" id="audioBtn" onclick="toggleAudio()"><i class="fas fa-play"></i></button>
+                <input type="range" id="audioProgress" min="0" max="100" value="0" class="audio-progress">
+                <div class="audio-time">
+                    <span id="audioCurrentTime">0:00</span>
+                    <span id="audioDuration">0:00</span>
+                </div>
+                <button class="audio-btn audio-close" onclick="fecharAudio()"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR CODE MODAL -->
+    <div class="modal" id="qrModal">
+        <div class="modal-content">
+            <button class="close" onclick="fecharQR()">✕</button>
+            <h2><i class="fas fa-qrcode"></i> Conectar Celular</h2>
+            <div class="qr-container" id="qrContainer"><p style="color:var(--text-secondary);">⏳ Gerando...</p></div>
+            <p class="qr-url" id="qrUrl">http://...</p>
+            <button class="btn btn-secondary" onclick="copiarLink()"><i class="fas fa-copy"></i> Copiar Link</button>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // =============================================
+        // CONEXZ - SCRIPT COMPLETO
+        // =============================================
+
+        const socket = io();
+        let videoAtual = null;
+        let audioAtual = null;
+        let audioTocando = false;
+
+        // =============================================
+        // INICIALIZAR
+        // =============================================
+
+        async function init() {
+            try {
+                const res = await fetch('/api/device');
+                const data = await res.json();
+                document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0,8);
+                await carregarArquivos();
+                configurarEventos();
+                console.log('✅ ConexZ inicializado!');
+            } catch(e) {
+                console.error('❌ Erro:', e);
+                mostrarStatus('Erro ao inicializar', 'error');
+            }
+        }
+
+        // =============================================
+        // CONFIGURAR EVENTOS
+        // =============================================
+
+        function configurarEventos() {
+            // TABS
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    const tabName = this.dataset.tab;
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    const target = document.getElementById('tab-' + tabName);
+                    if(target) target.classList.add('active');
+                    if(['videos', 'music', 'images', 'files'].includes(tabName)) {
+                        carregarArquivos();
+                    }
+                });
+            });
+
+            // QR CODE
+            document.getElementById('qrBtn').addEventListener('click', gerarQR);
+
+            // REFRESH
+            document.getElementById('refreshBtn').addEventListener('click', carregarArquivos);
+
+            // UPLOAD
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if(e.dataTransfer.files.length) {
+                    enviarArquivos(e.dataTransfer.files);
+                }
+            });
+            fileInput.addEventListener('change', () => {
+                if(fileInput.files.length) {
+                    enviarArquivos(fileInput.files);
+                    fileInput.value = '';
+                }
+            });
+
+            // BUSCA
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const query = this.value.toLowerCase();
+                document.querySelectorAll('.file-item').forEach(item => {
+                    const name = item.dataset.name || '';
+                    item.style.display = name.includes(query) ? 'flex' : 'none';
+                });
+            });
+
+            // MODO ESCURO
+            document.getElementById('darkMode').addEventListener('change', function() {
+                if(this.checked) {
+                    document.documentElement.style.setProperty('--bg-primary', '#f0f4f8');
+                    document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
+                    document.documentElement.style.setProperty('--bg-card', '#e8edf3');
+                    document.documentElement.style.setProperty('--bg-hover', '#dce3ea');
+                    document.documentElement.style.setProperty('--text-primary', '#1a202c');
+                    document.documentElement.style.setProperty('--text-secondary', '#4a5568');
+                    document.documentElement.style.setProperty('--text-muted', '#718096');
+                    document.documentElement.style.setProperty('--border', '#cbd5e0');
+                } else {
+                    document.documentElement.style.setProperty('--bg-primary', '#0a0a1a');
+                    document.documentElement.style.setProperty('--bg-secondary', '#12122a');
+                    document.documentElement.style.setProperty('--bg-card', '#1a1a3e');
+                    document.documentElement.style.setProperty('--bg-hover', '#252550');
+                    document.documentElement.style.setProperty('--text-primary', '#ffffff');
+                    document.documentElement.style.setProperty('--text-secondary', '#a0aec0');
+                    document.documentElement.style.setProperty('--text-muted', '#6a7a8e');
+                    document.documentElement.style.setProperty('--border', '#2a2a5a');
+                }
+            });
+
+            // SOCKET
+            socket.on('new_file', () => {
+                carregarArquivos();
+                mostrarStatus('📄 Novo arquivo recebido!', 'success');
+            });
+            socket.on('file_deleted', () => {
+                carregarArquivos();
+            });
+
+            // FECHAR MODAIS
+            document.addEventListener('keydown', (e) => {
+                if(e.key === 'Escape') {
+                    fecharVideo();
+                    fecharQR();
+                    fecharAudio();
+                }
+            });
+
+            document.getElementById('videoModal').addEventListener('click', function(e) {
+                if(e.target === this) fecharVideo();
+            });
+            document.getElementById('qrModal').addEventListener('click', function(e) {
+                if(e.target === this) fecharQR();
+            });
+        }
+
+        // =============================================
+        // UPLOAD
+        // =============================================
+
+        async function enviarArquivos(files) {
+            const form = new FormData();
+            for(let f of files) form.append('file', f);
+            
+            const progress = document.getElementById('progressContainer');
+            const fill = document.getElementById('progressFill');
+            const text = document.getElementById('progressText');
+            progress.style.display = 'flex';
+            fill.style.width = '0%';
+            text.textContent = '0%';
+            
+            mostrarStatus('⏳ Enviando...', 'info');
+            
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/upload');
+                
+                xhr.upload.onprogress = (e) => {
+                    if(e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        fill.style.width = pct + '%';
+                        text.textContent = pct + '%';
+                    }
+                };
+                
+                xhr.onload = () => {
+                    progress.style.display = 'none';
+                    if(xhr.status === 200) {
+                        mostrarStatus('✅ Arquivo enviado com sucesso!', 'success');
+                        carregarArquivos();
+                    } else {
+                        mostrarStatus('❌ Erro ao enviar', 'error');
+                    }
+                };
+                
+                xhr.onerror = () => {
+                    progress.style.display = 'none';
+                    mostrarStatus('❌ Erro de conexão', 'error');
+                };
+                
+                xhr.send(form);
+            } catch(e) {
+                progress.style.display = 'none';
+                mostrarStatus('❌ Erro ao enviar', 'error');
+            }
+        }
+
+        // =============================================
+        // ARQUIVOS
+        // =============================================
+
+        async function carregarArquivos() {
+            try {
+                const res = await fetch('/api/files');
+                const files = await res.json();
+                renderizarArquivos(files);
+                renderizarMidia(files);
+                document.getElementById('fileCount').textContent = files.length;
+            } catch(e) {
+                console.error('❌ Erro:', e);
+                mostrarStatus('Erro ao carregar arquivos', 'error');
+            }
+        }
+
+        function renderizarArquivos(files) {
+            const list = document.getElementById('fileList');
+            if(!files.length) {
+                list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhum arquivo encontrado</p><p style="font-size:14px;">Envie seu primeiro arquivo!</p></div>`;
+                return;
+            }
+            
+            list.innerHTML = files.map(f => `
+                <div class="file-item" data-name="${f.name.toLowerCase()}">
+                    <div class="file-info">
+                        <i class="${getIcon(f.name)}"></i>
+                        <div class="file-details">
+                            <div class="file-name">${f.name}</div>
+                            <div class="file-meta">${f.size_formatted} • ${f.date}</div>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="visualizarArquivo('${f.id}')" title="Visualizar"><i class="fas fa-eye"></i></button>
+                        <button class="btn btn-sm btn-secondary" onclick="baixarArquivo('${f.id}')" title="Baixar"><i class="fas fa-download"></i></button>
+                        <button class="btn btn-sm btn-secondary" onclick="compartilharArquivo('${f.id}')" title="Compartilhar"><i class="fas fa-share-alt"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deletarArquivo('${f.id}')" title="Deletar"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderizarMidia(files) {
+            const videos = files.filter(f => f.name.match(/\.(mp4|webm|mov|mkv|avi)$/i));
+            const audios = files.filter(f => f.name.match(/\.(mp3|wav|ogg|flac|m4a)$/i));
+            const imagens = files.filter(f => f.name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i));
+            
+            document.getElementById('videoGrid').innerHTML = videos.length ? 
+                videos.map(v => `
+                    <div class="media-card" onclick="playVideo('${v.id}')">
+                        <video><source src="/api/view/${v.id}"></video>
+                        <div class="media-info">
+                            <div class="media-title">${v.name}</div>
+                            <div class="media-meta">${v.size_formatted}</div>
+                        </div>
+                    </div>
+                `).join('') :
+                `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-play-circle"></i><p>Nenhum vídeo encontrado</p></div>`;
+            
+            document.getElementById('musicGrid').innerHTML = audios.length ?
+                audios.map(a => `
+                    <div class="media-card" onclick="playAudio('${a.id}')">
+                        <div class="media-preview"><i class="fas fa-music"></i></div>
+                        <div class="media-info">
+                            <div class="media-title">${a.name}</div>
+                            <div class="media-meta">${a.size_formatted}</div>
+                        </div>
+                    </div>
+                `).join('') :
+                `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-music"></i><p>Nenhuma música encontrada</p></div>`;
+            
+            document.getElementById('imageGrid').innerHTML = imagens.length ?
+                imagens.map(i => `
+                    <div class="media-card" onclick="visualizarArquivo('${i.id}')">
+                        <div class="media-preview"><i class="fas fa-image" style="font-size:40px;"></i></div>
+                        <div class="media-info">
+                            <div class="media-title">${i.name}</div>
+                            <div class="media-meta">${i.size_formatted}</div>
+                        </div>
+                    </div>
+                `).join('') :
+                `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-images"></i><p>Nenhuma imagem encontrada</p></div>`;
+        }
+
+        // =============================================
+        // VÍDEO
+        // =============================================
+
+        function playVideo(id) {
+            videoAtual = id;
+            const modal = document.getElementById('videoModal');
+            const player = document.getElementById('videoPlayer');
+            player.src = '/api/view/' + id;
+            modal.classList.add('active');
+            player.play();
+        }
+
+        function fecharVideo() {
+            const player = document.getElementById('videoPlayer');
+            player.pause();
+            player.src = '';
+            document.getElementById('videoModal').classList.remove('active');
+        }
+
+        function baixarVideo() { if(videoAtual) baixarArquivo(videoAtual); }
+        function compartilharVideo() { if(videoAtual) compartilharArquivo(videoAtual); }
+
+        // =============================================
+        // ÁUDIO
+        // =============================================
+
+        function playAudio(id) {
+            if(audioAtual) { audioAtual.pause(); audioAtual = null; }
+            
+            audioAtual = new Audio('/api/view/' + id);
+            
+            fetch('/api/files').then(r => r.json()).then(files => {
+                const f = files.find(x => x.id === id);
+                if(f) document.getElementById('audioTitle').textContent = '🎵 ' + f.name;
+            });
+            
+            audioAtual.ontimeupdate = () => {
+                if(audioAtual.duration) {
+                    const pct = (audioAtual.currentTime / audioAtual.duration) * 100;
+                    document.getElementById('audioProgress').value = pct;
+                    document.getElementById('audioCurrentTime').textContent = formatTempo(audioAtual.currentTime);
+                }
+            };
+            
+            audioAtual.onloadedmetadata = () => {
+                document.getElementById('audioDuration').textContent = formatTempo(audioAtual.duration);
+            };
+            
+            audioAtual.onended = fecharAudio;
+            audioAtual.onerror = () => mostrarStatus('❌ Erro ao tocar música', 'error');
+            
+            document.getElementById('audioPlayer').style.display = 'block';
+            audioAtual.play();
+            audioTocando = true;
+            document.getElementById('audioBtn').innerHTML = '<i class="fas fa-pause"></i>';
+        }
+
+        function toggleAudio() {
+            if(!audioAtual) return;
+            if(audioTocando) {
+                audioAtual.pause();
+                document.getElementById('audioBtn').innerHTML = '<i class="fas fa-play"></i>';
+            } else {
+                audioAtual.play();
+                document.getElementById('audioBtn').innerHTML = '<i class="fas fa-pause"></i>';
+            }
+            audioTocando = !audioTocando;
+        }
+
+        function fecharAudio() {
+            if(audioAtual) { audioAtual.pause(); audioAtual.src = ''; audioAtual = null; }
+            document.getElementById('audioPlayer').style.display = 'none';
+            audioTocando = false;
+            document.getElementById('audioBtn').innerHTML = '<i class="fas fa-play"></i>';
+        }
+
+        // =============================================
+        // QR CODE
+        // =============================================
+
+        async function gerarQR() {
+            const modal = document.getElementById('qrModal');
+            const container = document.getElementById('qrContainer');
+            const urlEl = document.getElementById('qrUrl');
+            modal.classList.add('active');
+            container.innerHTML = '<p style="color:var(--text-secondary);">⏳ Gerando...</p>';
+            
+            try {
+                const res = await fetch('/api/qr');
+                const data = await res.json();
+                container.innerHTML = `<img src="data:image/png;base64,${data.qr}">`;
+                urlEl.textContent = data.url || 'http://' + window.location.host;
+            } catch(e) {
+                container.innerHTML = '<p style="color:#e53e3e;">❌ Erro ao gerar QR Code</p>';
+                urlEl.textContent = window.location.host;
+            }
+        }
+
+        function fecharQR() {
+            document.getElementById('qrModal').classList.remove('active');
+        }
+
+        async function copiarLink() {
+            const url = document.getElementById('qrUrl').textContent;
+            await navigator.clipboard.writeText(url);
+            mostrarStatus('✅ Link copiado!', 'success');
+        }
+
+        // =============================================
+        // FUNÇÕES COMPARTILHADAS
+        // =============================================
+
+        function visualizarArquivo(id) {
+            window.open('/api/view/' + id, '_blank');
+        }
+        
+        function baixarArquivo(id) {
+            window.location.href = '/api/download/' + id;
+            mostrarStatus('⬇️ Download iniciado', 'success');
+        }
+
+        async function compartilharArquivo(id) {
+            try {
+                const res = await fetch('/api/share/' + id);
+                const data = await res.json();
+                await navigator.clipboard.writeText(data.link);
+                mostrarStatus('✅ Link copiado!', 'success');
+                alert('Link compartilhável:\n' + data.link + '\n\nVálido por 24 horas');
+            } catch(e) {
+                mostrarStatus('❌ Erro ao compartilhar', 'error');
+            }
+        }
+
+        async function deletarArquivo(id) {
+            if(!confirm('Tem certeza que deseja deletar este arquivo?')) return;
+            try {
+                await fetch('/api/delete/' + id, { method: 'DELETE' });
+                mostrarStatus('🗑️ Arquivo deletado', 'success');
+                carregarArquivos();
+            } catch(e) {
+                mostrarStatus('❌ Erro ao deletar', 'error');
+            }
+        }
+
+        // =============================================
+        // TEMAS
+        // =============================================
+
+        function mudarTema(cor, btn) {
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.documentElement.style.setProperty('--accent', cor);
+            document.querySelectorAll('.btn-primary').forEach(b => {
+                b.style.background = cor;
+            });
+            document.querySelectorAll('.tab.active').forEach(t => {
+                t.style.background = cor;
+                t.style.borderColor = cor;
+            });
+            document.querySelectorAll('.badge').forEach(b => {
+                b.style.background = cor;
+            });
+            document.querySelectorAll('.logo-icon').forEach(l => {
+                l.style.background = cor;
+            });
+        }
+
+        // =============================================
+        // UTILITÁRIOS
+        // =============================================
+
+        function getIcon(name) {
+            if(name.match(/\.(mp4|webm|mov|mkv|avi)$/i)) return 'fas fa-play-circle';
+            if(name.match(/\.(mp3|wav|ogg|flac|m4a)$/i)) return 'fas fa-music';
+            if(name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) return 'fas fa-image';
+            if(name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$/i)) return 'fas fa-file-pdf';
+            if(name.match(/\.(zip|rar|7z|tar|gz)$/i)) return 'fas fa-file-archive';
+            return 'fas fa-file';
+        }
+
+        function formatTempo(segundos) {
+            if(!segundos || isNaN(segundos)) return '0:00';
+            const m = Math.floor(segundos / 60);
+            const s = Math.floor(segundos % 60);
+            return m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        function mostrarStatus(msg, tipo) {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            el.className = 'status ' + tipo;
+            el.style.display = 'block';
+            clearTimeout(el._timeout);
+            el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
+        }
+
+        // =============================================
+        // EXPORTAR FUNÇÕES
+        // =============================================
+
+        window.playVideo = playVideo;
+        window.fecharVideo = fecharVideo;
+        window.baixarVideo = baixarVideo;
+        window.compartilharVideo = compartilharVideo;
+        window.playAudio = playAudio;
+        window.toggleAudio = toggleAudio;
+        window.fecharAudio = fecharAudio;
+        window.visualizarArquivo = visualizarArquivo;
+        window.baixarArquivo = baixarArquivo;
+        window.compartilharArquivo = compartilharArquivo;
+        window.deletarArquivo = deletarArquivo;
+        window.gerarQR = gerarQR;
+        window.fecharQR = fecharQR;
+        window.copiarLink = copiarLink;
+        window.mudarTema = mudarTema;
+
+        // =============================================
+        // INICIAR
+        // =============================================
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

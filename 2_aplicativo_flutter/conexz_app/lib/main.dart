@@ -53,8 +53,8 @@ class _ConexZHomeState extends State<ConexZHome> {
           },
         ),
       )
-      // Link atualizado para o seu domínio no Render
-      ..loadRequest(Uri.parse('https://conexz-app.onrender.com'));
+      // ALTERE AQUI: Coloque o IP do seu computador na rede Wi-Fi local (ex: http://192.168.1.10:5000)
+      ..loadRequest(Uri.parse('http://192.168.1.10:5001'));
   }
 
   @override
@@ -72,19 +72,48 @@ class _ConexZHomeState extends State<ConexZHome> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('ConexZ'),
+          title: const Text('ConexZ - Wi-Fi'),
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
           centerTitle: true,
+          // Botões de navegação adicionados na barra superior!
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () async {
+                if (await controller.canGoBack()) {
+                  controller.goBack();
+                }
+              },
+              tooltip: 'Voltar',
+            ),
+            IconButton(
+              icon: const Icon(Icons.arrow_forward),
+              onPressed: () async {
+                if (await controller.canGoForward()) {
+                  controller.goForward();
+                }
+              },
+              tooltip: 'Avançar',
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                controller.reload();
+              },
+              tooltip: 'Recarregar',
+            ),
+          ],
         ),
         body: Stack(
           children: [
             WebViewWidget(controller: controller),
             if (isLoading)
               const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.blue,
-                ),
+                for (var i = 0; i < 1; i++)
+                  CircularProgressIndicator(
+                    color: Colors.blue,
+                  ),
               ),
           ],
         ),

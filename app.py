@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import qrcode
 import io
@@ -10,32 +10,13 @@ import time
 import socket
 import secrets
 import json
-from supabase import create_client, Client
-from dotenv import load_dotenv
 from datetime import datetime
-
-# Carregar variáveis de ambiente
-load_dotenv()
+import glob
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'conexz-secret'
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
-
-# ==========================================
-# CONFIGURAR SUPABASE
-# ==========================================
-
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
-
-supabase = None
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
-        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ Conectado ao Supabase!")
-    except Exception as e:
-        print(f"❌ Erro ao conectar Supabase: {e}")
 
 # ==========================================
 # CONFIGURAÇÕES
@@ -46,11 +27,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB
 
-# Armazenamento local (fallback)
+# Banco de dados em memória (arquivos ficam enquanto servidor roda)
 db = {'files': {}}
 device_id = secrets.token_hex(8)
 
-def get_ip():
+def get_local_ip():
+    """Pega o IP local do computador"""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -60,82 +42,13 @@ def get_ip():
     except:
         return "127.0.0.1"
 
-# ==========================================
-# FUNÇÕES DO SUPABASE STORAGE
-# ==========================================
-
-def save_file_to_storage(file_id, filename, file_data, file_size):
-    """Salva arquivo no Supabase Storage (nuvem)"""
-    if not supabase:
-        return False
-    
-    try:
-        # Salvar no Storage
-        bucket = supabase.storage.from_('conexz-files')
-        bucket.upload(f"{file_id}_{filename}", file_data)
-        
-        # Salvar metadados na tabela
-        data = {
-            'file_id': file_id,
-            'filename': filename,
-            'file_size': file_size,
-            'file_type': filename.split('.')[-1] if '.' in filename else '',
-            'created_at': datetime.now().isoformat()
-        }
-        supabase.table('files').insert(data).execute()
-        
-        print(f"✅ Arquivo salvo na nuvem: {filename}")
-        return True
-    except Exception as e:
-        print(f"❌ Erro ao salvar na nuvem: {e}")
-        return False
-
-def get_files_from_storage():
-    """Busca arquivos do Supabase Storage"""
-    if not supabase:
-        return []
-    
-    try:
-        # Buscar metadados
-        result = supabase.table('files').select('*').order('created_at', desc=True).execute()
-        
-        files = []
-        for item in result.data:
-            # Gerar URL pública
-            try:
-                bucket = supabase.storage.from_('conexz-files')
-                url = bucket.get_public_url(f"{item['file_id']}_{item['filename']}")
-            except:
-                url = None
-            
-            files.append({
-                'id': item['file_id'],
-                'name': item['filename'],
-                'size': item['file_size'],
-                'date': item['created_at'],
-                'url': url
-            })
-        return files
-    except Exception as e:
-        print(f"❌ Erro ao buscar arquivos: {e}")
-        return []
-
-def delete_file_from_storage(file_id, filename):
-    """Deleta arquivo do Supabase Storage"""
-    if not supabase:
-        return False
-    
-    try:
-        # Deletar do Storage
-        bucket = supabase.storage.from_('conexz-files')
-        bucket.remove([f"{file_id}_{filename}"])
-        
-        # Deletar metadados
-        supabase.table('files').delete().eq('file_id', file_id).execute()
-        return True
-    except Exception as e:
-        print(f"❌ Erro ao deletar: {e}")
-        return False
+def format_size(bytes):
+    """Formata tamanho do arquivo"""
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if bytes < 1024:
+            return f"{bytes:.1f} {unit}"
+        bytes /= 1024
+    return f"{bytes:.1f} TB"
 
 # ==========================================
 # ROTAS DA API
@@ -147,28 +60,65 @@ def index():
 
 @app.route('/api/device')
 def device():
-    return jsonify({'id': device_id, 'ip': get_ip(), 'port': 5001})
+    return jsonify({
+        'id': device_id,
+        'ip': get_local_ip(),
+        'port': 5001
+    })
 
 @app.route('/api/qr')
-def qr():
-    try:
-        data = json.dumps({'id': device_id, 'ip': get_ip(), 'port': 5001})
-        qr = qrcode.QRCode(version=1, box_size=10, border=5)
-        qr.add_data(data)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        buffered = io.BytesIO()
-        img.save(buffered, format="PNG")
-        qr_base64 = base64.b64encode(buffered.getvalue()).decode()
-        return jsonify({
-            'qr': qr_base64,
-            'url': f"http://{get_ip()}:5001"
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+def generate_qr():
+    # Pega o IP do computador
+    ip = get_local_ip()
+    
+    # Se o IP for 127.0.0.1, tenta pegar o IP da rede
+    if ip == '127.0.0.1':
+        try:
+            import socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+        except:
+            ip = '127.0.0.1'
+    
+    data = json.dumps({
+        'device_id': device_id,
+        'ip': ip,
+        'port': 5001
+    })
+    
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(data)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
+    
+    return jsonify({
+        'qr': qr_base64,
+        'url': f"http://{ip}:5001"
+    })
+    
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(data)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
+    
+    return jsonify({
+        'qr': qr_base64,
+        'url': f"http://{ip}:5001"
+    })
 
 @app.route('/api/upload', methods=['POST'])
 def upload():
+    """Upload de arquivo com salvamento local"""
     if 'file' not in request.files:
         return jsonify({'error': 'Nenhum arquivo'}), 400
     
@@ -179,134 +129,212 @@ def upload():
     # Gerar ID único
     file_id = hashlib.md5(file.filename.encode() + str(time.time()).encode()).hexdigest()
     
-    # Salvar localmente (fallback)
+    # Salvar arquivo fisicamente
     file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{file.filename}")
     file.save(file_path)
     size = os.path.getsize(file_path)
     
-    # Salvar na nuvem (Supabase Storage)
-    file.seek(0)  # Voltar ao início do arquivo
-    file_data = file.read()
-    save_file_to_storage(file_id, file.filename, file_data, size)
+    # Salvar no banco de dados
+    db['files'][file_id] = {
+        'id': file_id,
+        'name': file.filename,
+        'path': file_path,
+        'size': size,
+        'size_formatted': format_size(size),
+        'date': time.time(),
+        'date_formatted': datetime.now().strftime('%d/%m/%Y %H:%M')
+    }
     
-    print(f"✅ Arquivo salvo: {file.filename} ({size} bytes)")
+    print(f"✅ Arquivo salvo: {file.filename} ({format_size(size)})")
     
-    socketio.emit('new_file', {'id': file_id, 'name': file.filename})
+    # Notificar via Socket
+    socketio.emit('new_file', {
+        'id': file_id,
+        'name': file.filename,
+        'size': format_size(size)
+    })
     
     return jsonify({
         'id': file_id,
         'name': file.filename,
         'size': size,
+        'size_formatted': format_size(size),
         'message': '✅ Arquivo enviado com sucesso!'
     })
 
 @app.route('/api/files')
-def files():
-    # Buscar da nuvem
-    files = get_files_from_storage()
-    print(f"📂 {len(files)} arquivos na nuvem")
+def list_files():
+    """Lista todos os arquivos salvos"""
+    files = []
+    for file_id, info in db['files'].items():
+        files.append({
+            'id': file_id,
+            'name': info['name'],
+            'size': info['size'],
+            'size_formatted': info['size_formatted'],
+            'date': info['date_formatted']
+        })
+    # Ordenar do mais novo para o mais antigo
+    files.sort(key=lambda x: x['date'], reverse=True)
+    print(f"📂 {len(files)} arquivos listados")
     return jsonify(files)
 
 @app.route('/api/view/<file_id>')
-def view(file_id):
-    """Visualizar arquivo (da nuvem)"""
-    if not supabase:
-        return jsonify({'error': 'Nuvem não disponível'}), 500
+def view_file(file_id):
+    """Visualizar arquivo"""
+    if file_id not in db['files']:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
     
-    try:
-        # Buscar nome do arquivo
-        result = supabase.table('files').select('filename').eq('file_id', file_id).execute()
-        if not result.data:
-            return jsonify({'error': 'Arquivo não encontrado'}), 404
-        
-        filename = result.data[0]['filename']
-        bucket = supabase.storage.from_('conexz-files')
-        url = bucket.get_public_url(f"{file_id}_{filename}")
-        
-        # Redirecionar para a URL pública
-        return jsonify({'url': url})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    file_info = db['files'][file_id]
+    if not os.path.exists(file_info['path']):
+        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
+    
+    # Detectar tipo de arquivo
+    filename = file_info['name']
+    ext = filename.split('.')[-1].lower() if '.' in filename else ''
+    
+    mimetypes = {
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'mp3': 'audio/mpeg',
+        'wav': 'audio/wav',
+        'ogg': 'audio/ogg',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'pdf': 'application/pdf',
+        'txt': 'text/plain',
+        'json': 'application/json',
+        'zip': 'application/zip'
+    }
+    mimetype = mimetypes.get(ext, 'application/octet-stream')
+    
+    return send_file(file_info['path'], mimetype=mimetype)
 
 @app.route('/api/download/<file_id>')
-def download(file_id):
-    """Baixar arquivo (da nuvem)"""
-    if not supabase:
-        return jsonify({'error': 'Nuvem não disponível'}), 500
+def download_file(file_id):
+    """Baixar arquivo"""
+    if file_id not in db['files']:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
     
-    try:
-        # Buscar nome do arquivo
-        result = supabase.table('files').select('filename').eq('file_id', file_id).execute()
-        if not result.data:
-            return jsonify({'error': 'Arquivo não encontrado'}), 404
-        
-        filename = result.data[0]['filename']
-        bucket = supabase.storage.from_('conexz-files')
-        url = bucket.get_public_url(f"{file_id}_{filename}")
-        
-        return jsonify({'download_url': url})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    file_info = db['files'][file_id]
+    if not os.path.exists(file_info['path']):
+        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
+    
+    return send_file(
+        file_info['path'],
+        as_attachment=True,
+        download_name=file_info['name']
+    )
+
+@app.route('/api/share/<file_id>')
+def share_file(file_id):
+    """Criar link compartilhável"""
+    if file_id not in db['files']:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    
+    token = secrets.token_urlsafe(12)
+    share_url = f"{request.host_url}api/s/{token}"
+    
+    # Salvar link
+    db['shared_links'] = db.get('shared_links', {})
+    db['shared_links'][token] = {
+        'file_id': file_id,
+        'expires': time.time() + 86400  # 24 horas
+    }
+    
+    return jsonify({
+        'link': share_url,
+        'expires': time.time() + 86400
+    })
+
+@app.route('/api/s/<token>')
+def shared_access(token):
+    """Acessar link compartilhável"""
+    db['shared_links'] = db.get('shared_links', {})
+    
+    if token not in db['shared_links']:
+        return jsonify({'error': 'Link inválido'}), 404
+    
+    link = db['shared_links'][token]
+    if time.time() > link['expires']:
+        del db['shared_links'][token]
+        return jsonify({'error': 'Link expirado'}), 410
+    
+    return download_file(link['file_id'])
 
 @app.route('/api/delete/<file_id>', methods=['DELETE'])
-def delete(file_id):
+def delete_file(file_id):
     """Deletar arquivo"""
-    if not supabase:
-        return jsonify({'error': 'Nuvem não disponível'}), 500
+    if file_id not in db['files']:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
     
-    try:
-        # Buscar nome do arquivo
-        result = supabase.table('files').select('filename').eq('file_id', file_id).execute()
-        if result.data:
-            filename = result.data[0]['filename']
-            delete_file_from_storage(file_id, filename)
-        
-        socketio.emit('file_deleted', {'id': file_id})
-        return jsonify({'message': '🗑️ Arquivo deletado'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    file_info = db['files'][file_id]
+    if os.path.exists(file_info['path']):
+        os.remove(file_info['path'])
+    
+    del db['files'][file_id]
+    
+    socketio.emit('file_deleted', {'id': file_id})
+    return jsonify({'message': '🗑️ Arquivo deletado'})
 
 @app.route('/api/status')
 def status():
-    files = get_files_from_storage()
+    """Status do servidor"""
     return jsonify({
         'status': 'online',
         'device': device_id,
-        'ip': get_ip(),
-        'files': len(files),
-        'cloud': supabase is not None
+        'ip': get_local_ip(),
+        'port': 5001,
+        'files': len(db['files'])
     })
 
-@app.route('/manifest.json')
-def manifest():
-    return send_file('static/manifest.json', mimetype='application/json')
+# ==========================================
+# SOCKET.IO EVENTOS
+# ==========================================
+
+@socketio.on('connect')
+def handle_connect():
+    device_id = request.args.get('device_id')
+    if device_id:
+        emit('device_connected', {'device_id': device_id}, broadcast=True)
+        print(f"📱 Dispositivo conectado: {device_id[:8]}...")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    device_id = request.args.get('device_id')
+    if device_id:
+        emit('device_disconnected', {'device_id': device_id}, broadcast=True)
+        print(f"📱 Dispositivo desconectado: {device_id[:8]}...")
 
 # ==========================================
 # INICIAR SERVIDOR
 # ==========================================
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5001))
-    ip = get_ip()
+    port = 5001
+    ip = get_local_ip()
     
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   📱 CONEXZ - SALVANDO ARQUIVOS NA NUVEM!                   ║
+    ║   📱 CONEXZ - TRANSFERÊNCIA INTELIGENTE                     ║
     ╠═══════════════════════════════════════════════════════════════╣
     ║  🌐  LOCAL:    http://localhost:{}                           ║
     ║  📱  CELULAR:  http://{}:{}                ║
-    ║  ☁️  NUVEM:    {}                                            ║
-    ║  💾  ARQUIVOS: SALVOS NA NUVEM (NUNCA SOMEM!)               ║
+    ║  📱  DISPOSITIVO: {}                                     ║
+    ║  💾  ARQUIVOS: SALVOS LOCALMENTE                           ║
+    ║  📂  PASTA:    uploads/                                     ║
     ╚═══════════════════════════════════════════════════════════════╝
-    """.format(port, ip, port, "✅ CONECTADO" if supabase else "❌ LOCAL"))
+    """.format(port, ip, port, device_id[:8]))
     
     print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
-    print("☁️  ARQUIVOS SALVOS NA NUVEM - NUNCA SOMEM!\n")
+    print("📂 Arquivos salvos na pasta 'uploads/'\n")
     
     socketio.run(
         app,
         host='0.0.0.0',
         port=port,
-        debug=False,
+        debug=True,
         allow_unsafe_werkzeug=True
     )
