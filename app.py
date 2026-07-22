@@ -12,9 +12,6 @@ import secrets
 import json
 from datetime import datetime
 import glob
-import random
-import string
-from PIL import Image  # ← IMPORTANTE!
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'conexz-secret'
@@ -35,7 +32,6 @@ db = {'files': {}, 'shared_links': {}}
 device_id = secrets.token_hex(8)
 
 def get_local_ip():
-    """Pega o IP local do computador"""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -46,7 +42,6 @@ def get_local_ip():
         return "127.0.0.1"
 
 def format_size(bytes):
-    """Formata tamanho do arquivo"""
     for unit in ['B', 'KB', 'MB', 'GB']:
         if bytes < 1024:
             return f"{bytes:.1f} {unit}"
@@ -71,7 +66,7 @@ def device():
 
 @app.route('/api/qr')
 def generate_qr():
-    """Gera QR Code com o IP correto"""
+    """Gera QR Code com o IP correto para conexão"""
     ip = get_local_ip()
     
     if ip == '127.0.0.1':
@@ -105,7 +100,7 @@ def generate_qr():
 
 @app.route('/api/upload', methods=['POST'])
 def upload():
-    """Upload de arquivo com salvamento local"""
+    """Upload de arquivo com salvamento permanente"""
     if 'file' not in request.files:
         return jsonify({'error': 'Nenhum arquivo'}), 400
     
@@ -302,161 +297,6 @@ def status_completo():
     })
 
 # ==========================================
-# CONEXÃO POR CÓDIGO
-# ==========================================
-
-# Armazenar códigos de conexão
-connection_codes = {}
-connected_devices = {}
-
-def generate_connection_code():
-    """Gera um código de 6 dígitos aleatório"""
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-
-@app.route('/api/connection/generate', methods=['POST'])
-def generate_connection():
-    """Gera um novo código de conexão"""
-    code = generate_connection_code()
-    
-    connection_codes[code] = {
-        'created_at': time.time(),
-        'expires_at': time.time() + 300,  # 5 minutos
-        'device_id': device_id,
-        'ip': get_local_ip(),
-        'port': 5001
-    }
-    
-    return jsonify({
-        'code': code,
-        'expires_in': 300,
-        'ip': get_local_ip(),
-        'port': 5001
-    })
-
-@app.route('/api/connection/connect', methods=['POST'])
-def connect_with_code():
-    """Conecta usando um código"""
-    data = request.get_json()
-    code = data.get('code', '').upper().strip()
-    
-    if code not in connection_codes:
-        return jsonify({'error': 'Código inválido'}), 404
-    
-    conn = connection_codes[code]
-    if time.time() > conn['expires_at']:
-        del connection_codes[code]
-        return jsonify({'error': 'Código expirado'}), 410
-    
-    device_id = data.get('device_id', 'desconhecido')
-    connected_devices[device_id] = {
-        'code': code,
-        'connected_at': time.time(),
-        'ip': conn['ip'],
-        'port': conn['port']
-    }
-    
-    socketio.emit('device_connected', {
-        'device_id': device_id,
-        'code': code,
-        'ip': conn['ip']
-    })
-    
-    return jsonify({
-        'success': True,
-        'message': '✅ Dispositivo conectado!',
-        'ip': conn['ip'],
-        'port': conn['port']
-    })
-
-@app.route('/api/connection/status')
-def connection_status():
-    """Verifica o status da conexão"""
-    return jsonify({
-        'connected_devices': len(connected_devices),
-        'devices': connected_devices,
-        'active_codes': len(connection_codes)
-    })
-
-@app.route('/api/connection/disconnect/<device_id>', methods=['DELETE'])
-def disconnect_device(device_id):
-    """Desconecta um dispositivo"""
-    if device_id in connected_devices:
-        del connected_devices[device_id]
-        socketio.emit('device_disconnected', {'device_id': device_id})
-        return jsonify({'message': '✅ Dispositivo desconectado'})
-    return jsonify({'error': 'Dispositivo não encontrado'}), 404
-
-# ==========================================
-# QR CODE PARA CÓDIGO DE CONEXÃO
-# ==========================================
-
-@app.route('/api/connection/qr/<code>')
-def connection_qr(code):
-    """Gera QR Code para o código de conexão"""
-    ip = get_local_ip()
-    data = json.dumps({
-        'code': code,
-        'ip': ip,
-        'port': 5001,
-        'device_id': device_id
-    })
-    
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(data)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffered = io.BytesIO()
-    img.save(buffered, format="PNG")
-    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
-    
-    return jsonify({
-        'qr': qr_base64,
-        'code': code,
-        'url': f"http://{ip}:5001"
-    })
-
-# ==========================================
-# SCAN QR CODE (CÂMERA)
-# ==========================================
-
-@app.route('/api/scan-qr', methods=['POST'])
-def scan_qr():
-    """Decodifica QR Code da imagem enviada pelo celular"""
-    try:
-        from pyzbar.pyzbar import decode
-        
-        data = request.get_json()
-        image_data = data.get('image', '')
-        
-        if not image_data:
-            return jsonify({'error': 'Nenhuma imagem enviada'}), 400
-        
-        # Remover cabeçalho base64
-        if ',' in image_data:
-            image_data = image_data.split(',')[1]
-        
-        image_bytes = base64.b64decode(image_data)
-        image = Image.open(io.BytesIO(image_bytes))
-        
-        # Tentar decodificar QR Code
-        decoded = decode(image)
-        
-        if decoded:
-            for obj in decoded:
-                try:
-                    qr_data = json.loads(obj.data.decode('utf-8'))
-                    if 'code' in qr_data:
-                        return jsonify({'code': qr_data['code']})
-                except:
-                    pass
-        
-        return jsonify({'error': 'Nenhum código encontrado'}), 404
-    except Exception as e:
-        print(f"❌ Erro no scan: {e}")
-        return jsonify({'error': str(e)}), 500
-
-# ==========================================
 # SOCKET.IO EVENTOS
 # ==========================================
 
@@ -491,14 +331,12 @@ if __name__ == '__main__':
     ║  📱  DISPOSITIVO: {}                                     ║
     ║  💾  ARQUIVOS: SALVOS LOCALMENTE                           ║
     ║  📂  PASTA:    uploads/                                     ║
-    ║  🔗  CONEXÃO:  QR CODE + CÓDIGO + CÂMERA                   ║
-    ║  📷  SCAN:     ESCANEIE QR CODE COM A CÂMERA               ║
+    ║  🔗  CONEXÃO:  QR CODE                                     ║
     ╚═══════════════════════════════════════════════════════════════╝
     """.format(port, ip, port, device_id[:8]))
     
     print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
-    print("🔑 GERAR CÓDIGO DE CONEXÃO: /api/connection/generate")
-    print("📷 ESCANEAR QR CODE: Use a câmera do celular")
+    print("📷 ESCANEIE O QR CODE PARA CONECTAR")
     print("📂 Arquivos salvos na pasta 'uploads/'\n")
     
     socketio.run(

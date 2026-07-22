@@ -1,5 +1,5 @@
 /* ==========================================
-   CONEXZ - ESTILOS COMPLETOS
+   CONEXZ - ESTILOS COMPLETOS (SIMPLIFICADO)
    ========================================== */
 
 :root {
@@ -299,6 +299,33 @@ header {
 
 .ip-display .ip-copy {
     margin-top: 8px;
+}
+
+/* ===== QR CODE CONEXÃO ===== */
+#qrCodeImage {
+    max-width: 200px;
+    border-radius: 12px;
+    border: 2px solid var(--accent);
+    margin: 0 auto;
+}
+
+#qrCodeDisplay {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+    border: 2px dashed var(--border);
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#manualIp {
+    font-size: 14px;
+    color: var(--accent);
+    font-family: monospace;
+    word-break: break-all;
 }
 
 /* ===== TABS ===== */
@@ -968,111 +995,6 @@ header {
     box-shadow: 0 0 20px rgba(255,255,255,0.2);
 }
 
-/* ==========================================
-   CONEXÃO POR CÓDIGO - ESTILOS
-   ========================================== */
-
-.code-display {
-    background: var(--bg-card);
-    border-radius: 12px;
-    padding: 24px;
-    text-align: center;
-    border: 2px dashed var(--border);
-    margin-bottom: 16px;
-    transition: var(--transition);
-}
-
-.code-display:hover {
-    border-color: var(--accent);
-}
-
-.code-display .code {
-    font-size: 48px;
-    font-weight: 800;
-    letter-spacing: 12px;
-    color: var(--accent);
-    font-family: monospace;
-}
-
-.code-display .code-timer {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-top: 8px;
-}
-
-.code-display .code-label {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 4px;
-}
-
-.connect-input {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-}
-
-.connect-input input {
-    flex: 1;
-    padding: 12px 16px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: var(--bg-card);
-    color: var(--text-primary);
-    font-size: 18px;
-    text-transform: uppercase;
-    letter-spacing: 4px;
-    font-family: monospace;
-    text-align: center;
-    transition: var(--transition);
-}
-
-.connect-input input:focus {
-    border-color: var(--accent);
-    outline: none;
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
-}
-
-.connect-input input::placeholder {
-    color: var(--text-muted);
-    letter-spacing: 2px;
-    font-size: 14px;
-}
-
-.devices-list {
-    margin-top: 16px;
-}
-
-.device-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: var(--bg-primary);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    margin-bottom: 8px;
-    transition: var(--transition);
-}
-
-.device-item:hover {
-    border-color: var(--accent);
-}
-
-.device-item .device-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.device-item .device-status {
-    color: #48bb78;
-    font-size: 12px;
-    font-weight: 500;
-}
-
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .container {
@@ -1143,21 +1065,6 @@ header {
         flex-direction: column;
         align-items: flex-start;
     }
-    
-    .code-display .code {
-        font-size: 32px;
-        letter-spacing: 8px;
-    }
-    
-    .connect-input {
-        flex-wrap: wrap;
-    }
-    
-    .connect-input input {
-        width: 100%;
-        font-size: 16px;
-        letter-spacing: 2px;
-    }
 }
 
 @media (max-width: 480px) {
@@ -1175,10 +1082,5 @@ header {
     
     .status-grid {
         grid-template-columns: 1fr;
-    }
-    
-    .code-display .code {
-        font-size: 28px;
-        letter-spacing: 4px;
     }
 }

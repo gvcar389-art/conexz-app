@@ -268,168 +268,29 @@
         .theme-btn:hover { transform: scale(1.1); }
         .theme-btn.active { border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
         
-        /* ===== CONEXÃO POR CÓDIGO ===== */
-        .code-display {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 24px;
-            text-align: center;
-            border: 2px dashed var(--border);
-            margin-bottom: 16px;
-            transition: var(--transition);
-        }
-        .code-display:hover {
-            border-color: var(--accent);
-        }
-        .code-display .code {
-            font-size: 48px;
-            font-weight: 800;
-            letter-spacing: 12px;
-            color: var(--accent);
-            font-family: monospace;
-        }
-        .code-display .code-timer {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-top: 8px;
-        }
-        .code-display .code-label {
-            font-size: 12px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        
-        /* QR Code do Código */
-        .code-qr-container {
-            text-align: center;
-            margin: 12px 0;
-            display: none;
-        }
-        .code-qr-container img {
-            max-width: 150px;
+        /* ===== QR CODE ===== */
+        #qrCodeImage {
+            max-width: 200px;
             border-radius: 12px;
             border: 2px solid var(--accent);
-        }
-        .code-qr-container .qr-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-        }
-        
-        /* Scanner */
-        .scanner-container {
-            position: relative;
-            width: 100%;
-            max-width: 300px;
             margin: 0 auto;
-            aspect-ratio: 1/1;
+        }
+        #qrCodeDisplay {
             background: var(--bg-card);
             border-radius: 12px;
-            overflow: hidden;
-            border: 2px solid var(--border);
-        }
-        .scanner-container video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .scanner-overlay {
-            position: absolute;
-            inset: 0;
-            border: 3px solid var(--accent);
-            pointer-events: none;
-            border-radius: 12px;
-            box-shadow: 0 0 30px rgba(0,212,255,0.2);
-        }
-        .scanner-frame {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 60%;
-            height: 60%;
-            border: 2px dashed var(--accent);
-            opacity: 0.5;
-            border-radius: 8px;
-        }
-        
-        .scanned-code-display {
-            display: none;
-            margin-top: 12px;
-            padding: 12px;
-            background: var(--bg-card);
-            border-radius: 12px;
-            border: 1px solid #48bb78;
-            text-align: center;
-        }
-        .scanned-code-display .scanned-label {
-            color: #48bb78;
-        }
-        .scanned-code-display .scanned-code {
-            font-weight: 700;
-            color: var(--accent);
-            font-size: 24px;
-            letter-spacing: 4px;
-            font-family: monospace;
-        }
-        
-        .connect-input {
+            padding: 20px;
+            border: 2px dashed var(--border);
+            min-height: 200px;
             display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
-        .connect-input input {
-            flex: 1;
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            background: var(--bg-card);
-            color: var(--text-primary);
-            font-size: 18px;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            font-family: monospace;
-            text-align: center;
-            transition: var(--transition);
-        }
-        .connect-input input:focus {
-            border-color: var(--accent);
-            outline: none;
-            box-shadow: 0 0 20px rgba(0,212,255,0.1);
-        }
-        .connect-input input::placeholder {
-            color: var(--text-muted);
-            letter-spacing: 2px;
+        #manualIp {
             font-size: 14px;
-        }
-        
-        .devices-list {
-            margin-top: 16px;
-        }
-        .device-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            background: var(--bg-primary);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            margin-bottom: 8px;
-            transition: var(--transition);
-        }
-        .device-item:hover {
-            border-color: var(--accent);
-        }
-        .device-item .device-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .device-item .device-status {
-            color: #48bb78;
-            font-size: 12px;
-            font-weight: 500;
+            color: var(--accent);
+            font-family: monospace;
+            word-break: break-all;
         }
         
         /* RESPONSIVE */
@@ -446,14 +307,11 @@
             .audio-info { min-width: 100%; text-align: center; }
             .audio-controls { width: 100%; }
             .modal-content { padding: 20px; }
-            .code-display .code { font-size: 32px; letter-spacing: 8px; }
-            .scanner-container { max-width: 100%; }
         }
         @media (max-width: 480px) {
             .container { padding: 10px; }
             .upload-area { padding: 30px 16px; }
             .media-grid { grid-template-columns: repeat(2, 1fr); }
-            .code-display .code { font-size: 24px; letter-spacing: 4px; }
         }
     </style>
 </head>
@@ -578,66 +436,66 @@
             <div id="imageGrid" class="media-grid"></div>
         </div>
 
-        <!-- TAB CONEXÃO -->
+        <!-- TAB CONEXÃO (SIMPLIFICADA) -->
         <div class="tab-content" id="tab-connection">
-            <h2><i class="fas fa-link"></i> Conexão por Código</h2>
+            <h2><i class="fas fa-qrcode"></i> Conectar pelo QR Code</h2>
             
-            <div style="display:grid; gap:20px; grid-template-columns: 1fr 1fr;">
-                <!-- GERAR CÓDIGO -->
-                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
-                    <h3 style="margin-bottom:12px; color:var(--accent);">💻 Gerar Código</h3>
-                    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Gere um código para conectar seu celular</p>
+            <div style="display:grid; gap:20px; grid-template-columns: 1fr 1fr; max-width:800px; margin:0 auto;">
+                <!-- QR CODE -->
+                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border); text-align:center;">
+                    <h3 style="margin-bottom:12px; color:var(--accent);">📷 QR Code</h3>
+                    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Escaneie com a câmera do celular</p>
                     
-                    <div class="code-display">
-                        <div class="code-label">🔑 CÓDIGO</div>
-                        <div class="code" id="connectionCode">------</div>
-                        <div class="code-timer" id="codeTimer">⏳ Clique em "Gerar Código"</div>
-                    </div>
-                    
-                    <!-- QR Code do Código -->
-                    <div class="code-qr-container" id="codeQRContainer">
-                        <div class="qr-label">📷 Escaneie com a câmera do celular</div>
-                        <img id="codeQRImage" src="" alt="QR Code">
-                    </div>
-                    
-                    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-                        <button class="btn btn-primary" onclick="gerarCodigo()" id="gerarCodeBtn">
-                            <i class="fas fa-sync"></i> Gerar Código
-                        </button>
-                        <button class="btn btn-secondary" onclick="copiarCodigo()" id="copiarCodeBtn">
-                            <i class="fas fa-copy"></i> Copiar
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- ESCANEAR COM CÂMERA -->
-                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
-                    <h3 style="margin-bottom:12px; color:var(--accent);">📷 Escanear Código</h3>
-                    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Aponte a câmera para o QR Code do computador</p>
-                    
-                    <div class="scanner-container" id="scannerContainer">
-                        <video id="scannerVideo" autoplay playsinline></video>
-                        <div class="scanner-overlay"></div>
-                        <div class="scanner-frame"></div>
+                    <div id="qrCodeDisplay">
+                        <div style="font-size:14px; color:var(--text-secondary);" id="qrStatus">Clique em "Gerar QR Code"</div>
+                        <img id="qrCodeImage" src="" alt="QR Code" style="max-width:200px; border-radius:12px; border:2px solid var(--accent); display:none;">
                     </div>
                     
                     <div style="display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap;">
-                        <button class="btn btn-primary" onclick="iniciarScanner()" id="scanBtn">
-                            <i class="fas fa-camera"></i> Iniciar Câmera
+                        <button class="btn btn-primary" onclick="gerarQRCodeConexao()" id="gerarQRBtn">
+                            <i class="fas fa-qrcode"></i> Gerar QR Code
                         </button>
-                        <button class="btn btn-secondary" onclick="pararScanner()" id="stopScanBtn" style="display:none;">
-                            <i class="fas fa-stop"></i> Parar
+                        <button class="btn btn-secondary" onclick="copiarLinkConexao()" id="copiarLinkBtn">
+                            <i class="fas fa-copy"></i> Copiar Link
                         </button>
                     </div>
                     
-                    <div id="scanStatus" style="margin-top:12px; font-size:14px; color:var(--text-secondary); text-align:center;"></div>
+                    <div id="linkDisplayConexao" style="margin-top:12px; padding:8px 12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border); display:none; word-break:break-all;">
+                        <span style="font-size:12px; color:var(--text-secondary);">📱 Link:</span>
+                        <span id="connectionLinkText" style="font-size:13px; color:var(--accent); font-family:monospace;"></span>
+                    </div>
+                </div>
+                
+                <!-- COMO CONECTAR -->
+                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
+                    <h3 style="margin-bottom:12px; color:var(--accent);">📱 Como Conectar</h3>
                     
-                    <div class="scanned-code-display" id="scannedCodeDisplay">
-                        <div class="scanned-label">✅ Código lido:</div>
-                        <div class="scanned-code" id="scannedCode"></div>
-                        <button class="btn btn-primary" onclick="conectarCodigoLido()" style="margin-top:8px; width:100%;">
-                            <i class="fas fa-link"></i> Conectar
-                        </button>
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        <div style="background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border);">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="background:var(--accent); color:#0a0a1a; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">1</span>
+                                <span style="font-size:14px;">Clique em <strong>"Gerar QR Code"</strong></span>
+                            </div>
+                        </div>
+                        
+                        <div style="background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border);">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="background:var(--accent); color:#0a0a1a; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">2</span>
+                                <span style="font-size:14px;">No celular, abra a câmera e escaneie o QR Code</span>
+                            </div>
+                        </div>
+                        
+                        <div style="background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border);">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="background:var(--accent); color:#0a0a1a; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">3</span>
+                                <span style="font-size:14px;">O app vai abrir automaticamente!</span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:8px; padding:12px; background:var(--bg-card); border-radius:12px; border:1px solid var(--border); text-align:center;">
+                            <span style="font-size:12px; color:var(--text-muted);">Ou digite manualmente:</span>
+                            <div style="font-size:14px; color:var(--accent); font-family:monospace; margin-top:4px;" id="manualIp">http://192.168.1.10:5001</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -645,7 +503,7 @@
             <!-- DISPOSITIVOS CONECTADOS -->
             <div style="margin-top:20px; background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
                 <h3 style="margin-bottom:12px; color:var(--accent);">📡 Dispositivos Conectados</h3>
-                <div class="devices-list" id="connectedDevicesList">
+                <div id="connectedDevicesList">
                     <p style="color:var(--text-secondary); font-size:14px;">Nenhum dispositivo conectado</p>
                 </div>
             </div>
@@ -720,7 +578,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         // =============================================
-        // CONEXZ - SCRIPT COMPLETO
+        // CONEXZ - SCRIPT COMPLETO (SIMPLIFICADO)
         // =============================================
 
         const socket = io();
@@ -728,12 +586,7 @@
         let audioAtual = null;
         let audioTocando = false;
         let statusInterval = null;
-        let currentCode = null;
-        let codeTimerInterval = null;
-        let scannerActive = false;
-        let scannerStream = null;
-        let scanInterval = null;
-        let scannedCode = null;
+        let currentQRCode = null;
 
         // =============================================
         // INICIALIZAR
@@ -746,7 +599,6 @@
                 document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0,8);
                 await carregarArquivos();
                 await carregarStatus();
-                await carregarDispositivos();
                 configurarEventos();
                 iniciarStatusAutomatico();
                 console.log('✅ ConexZ inicializado!');
@@ -776,6 +628,7 @@
                 
                 const url = `http://${data.ip}:${data.port}`;
                 document.getElementById('statusUrl').textContent = url;
+                document.getElementById('manualIp').textContent = url;
                 
                 const badge = document.getElementById('statusBadge');
                 if (data.status === 'online') {
@@ -847,274 +700,50 @@
         }
 
         // =============================================
-        // CONEXÃO POR CÓDIGO + CÂMERA
+        // QR CODE CONEXÃO (SIMPLIFICADO)
         // =============================================
 
-        async function gerarCodigo() {
+        async function gerarQRCodeConexao() {
             try {
-                const res = await fetch('/api/connection/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const res = await fetch('/api/qr');
                 const data = await res.json();
                 
-                currentCode = data.code;
-                document.getElementById('connectionCode').textContent = data.code;
-                document.getElementById('codeTimer').textContent = '⏳ Válido por 5 minutos';
-                document.getElementById('gerarCodeBtn').innerHTML = '<i class="fas fa-sync"></i> Gerar Novo';
-                
-                // Gerar QR Code do código
-                await gerarQRCode(data.code);
-                
-                iniciarContador();
-                
-                mostrarStatus(`📱 Código gerado: ${data.code}`, 'success');
-            } catch(e) {
-                mostrarStatus('❌ Erro ao gerar código', 'error');
-            }
-        }
-
-        async function gerarQRCode(code) {
-            try {
-                const res = await fetch(`/api/connection/qr/${code}`);
-                const data = await res.json();
-                
-                const container = document.getElementById('codeQRContainer');
-                const image = document.getElementById('codeQRImage');
+                const img = document.getElementById('qrCodeImage');
+                const status = document.getElementById('qrStatus');
+                const linkDisplay = document.getElementById('linkDisplayConexao');
+                const linkText = document.getElementById('connectionLinkText');
                 
                 if (data.qr) {
-                    image.src = `data:image/png;base64,${data.qr}`;
-                    container.style.display = 'block';
-                }
-            } catch(e) {
-                console.error('❌ Erro ao gerar QR Code:', e);
-            }
-        }
-
-        function iniciarContador() {
-            if (codeTimerInterval) clearInterval(codeTimerInterval);
-            let tempoRestante = 300;
-            
-            codeTimerInterval = setInterval(() => {
-                tempoRestante--;
-                const minutos = Math.floor(tempoRestante / 60);
-                const segundos = tempoRestante % 60;
-                document.getElementById('codeTimer').textContent = 
-                    `⏳ Válido por ${minutos}:${segundos.toString().padStart(2, '0')}`;
-                
-                if (tempoRestante <= 0) {
-                    clearInterval(codeTimerInterval);
-                    document.getElementById('codeTimer').textContent = '⏰ Código expirado';
-                    document.getElementById('connectionCode').textContent = '------';
-                    document.getElementById('codeQRContainer').style.display = 'none';
-                }
-            }, 1000);
-        }
-
-        function copiarCodigo() {
-            const code = document.getElementById('connectionCode').textContent;
-            if (code && code !== '------') {
-                navigator.clipboard.writeText(code);
-                mostrarStatus('✅ Código copiado!', 'success');
-            } else {
-                mostrarStatus('❌ Gere um código primeiro', 'error');
-            }
-        }
-
-        // =============================================
-        // SCANNER (CÂMERA)
-        // =============================================
-
-        async function iniciarScanner() {
-            try {
-                const video = document.getElementById('scannerVideo');
-                
-                scannerStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
-                });
-                video.srcObject = scannerStream;
-                await video.play();
-                
-                scannerActive = true;
-                document.getElementById('scanBtn').style.display = 'none';
-                document.getElementById('stopScanBtn').style.display = 'inline-flex';
-                document.getElementById('scanStatus').textContent = '📷 Câmera ativa. Aponte para o QR Code...';
-                document.getElementById('scanStatus').style.color = '#48bb78';
-                
-                startScanning();
-                
-            } catch(e) {
-                console.error('❌ Erro ao iniciar câmera:', e);
-                document.getElementById('scanStatus').textContent = '❌ Não foi possível acessar a câmera. Permita o acesso ou use o código manualmente.';
-                document.getElementById('scanStatus').style.color = '#fc8181';
-            }
-        }
-
-        function startScanning() {
-            if (scanInterval) clearInterval(scanInterval);
-            
-            scanInterval = setInterval(async () => {
-                if (!scannerActive) return;
-                
-                const video = document.getElementById('scannerVideo');
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                const imageData = canvas.toDataURL('image/png');
-                
-                try {
-                    const res = await fetch('/api/scan-qr', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ image: imageData })
-                    });
-                    const data = await res.json();
+                    img.src = `data:image/png;base64,${data.qr}`;
+                    img.style.display = 'block';
+                    status.textContent = '📷 Escaneie com a câmera do celular';
+                    status.style.color = 'var(--accent)';
                     
-                    if (data.code) {
-                        pararScanner();
-                        document.getElementById('scannedCodeDisplay').style.display = 'block';
-                        document.getElementById('scannedCode').textContent = data.code;
-                        document.getElementById('scanStatus').textContent = '✅ Código lido com sucesso!';
-                        document.getElementById('scanStatus').style.color = '#48bb78';
-                        
-                        scannedCode = data.code;
-                        
-                        if (navigator.vibrate) {
-                            navigator.vibrate(200);
-                        }
-                    }
-                } catch(e) {
-                    // Ignorar erros de leitura
+                    linkText.textContent = data.url;
+                    linkDisplay.style.display = 'block';
+                    
+                    document.getElementById('manualIp').textContent = data.url;
+                    
+                    currentQRCode = data.url;
+                    document.getElementById('gerarQRBtn').innerHTML = '<i class="fas fa-sync"></i> Atualizar QR Code';
+                    
+                    mostrarStatus('✅ QR Code gerado! Escaneie com o celular', 'success');
                 }
-            }, 500);
+            } catch(e) {
+                mostrarStatus('❌ Erro ao gerar QR Code', 'error');
+            }
         }
 
-        function pararScanner() {
-            scannerActive = false;
-            if (scanInterval) {
-                clearInterval(scanInterval);
-                scanInterval = null;
-            }
-            if (scannerStream) {
-                scannerStream.getTracks().forEach(track => track.stop());
-                scannerStream = null;
-            }
-            document.getElementById('scannerVideo').srcObject = null;
-            document.getElementById('scanBtn').style.display = 'inline-flex';
-            document.getElementById('stopScanBtn').style.display = 'none';
-            document.getElementById('scanStatus').textContent = '📷 Câmera desativada';
-            document.getElementById('scanStatus').style.color = 'var(--text-secondary)';
-        }
-
-        async function conectarCodigoLido() {
-            if (!scannedCode) {
-                mostrarStatus('❌ Nenhum código foi lido', 'error');
-                return;
-            }
-            
-            try {
-                const res = await fetch('/api/connection/connect', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        code: scannedCode,
-                        device_id: 'celular_' + Date.now()
-                    })
+        function copiarLinkConexao() {
+            const link = document.getElementById('connectionLinkText').textContent;
+            if (link && link !== '') {
+                navigator.clipboard.writeText(link).then(() => {
+                    mostrarStatus('✅ Link copiado!', 'success');
+                }).catch(() => {
+                    prompt('Copie o link:', link);
                 });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    mostrarStatus(`✅ Conectado com sucesso!`, 'success');
-                    document.getElementById('scannedCodeDisplay').style.display = 'none';
-                    pararScanner();
-                    carregarDispositivos();
-                } else {
-                    mostrarStatus(`❌ ${data.error}`, 'error');
-                }
-            } catch(e) {
-                mostrarStatus('❌ Erro ao conectar', 'error');
-            }
-        }
-
-        async function conectarComCodigo() {
-            const input = document.getElementById('connectCodeInput');
-            const code = input.value.toUpperCase().trim();
-            
-            if (!code || code.length !== 6) {
-                mostrarStatus('❌ Digite um código válido de 6 caracteres', 'error');
-                return;
-            }
-            
-            try {
-                const res = await fetch('/api/connection/connect', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        code: code,
-                        device_id: 'celular_' + Date.now()
-                    })
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    mostrarStatus(`✅ Conectado com sucesso! IP: ${data.ip}:${data.port}`, 'success');
-                    document.getElementById('connectStatus').innerHTML = 
-                        `<span style="color:#48bb78;">✅ Conectado a ${data.ip}:${data.port}</span>`;
-                    carregarDispositivos();
-                } else {
-                    mostrarStatus(`❌ ${data.error}`, 'error');
-                }
-            } catch(e) {
-                mostrarStatus('❌ Erro ao conectar', 'error');
-            }
-        }
-
-        async function carregarDispositivos() {
-            try {
-                const res = await fetch('/api/connection/status');
-                const data = await res.json();
-                
-                const list = document.getElementById('connectedDevicesList');
-                if (data.connected_devices === 0) {
-                    list.innerHTML = '<p style="color:var(--text-secondary); font-size:14px;">Nenhum dispositivo conectado</p>';
-                    return;
-                }
-                
-                list.innerHTML = Object.entries(data.devices).map(([id, info]) => `
-                    <div class="device-item">
-                        <div class="device-info">
-                            <span style="font-weight:600;">📱 ${id}</span>
-                            <span style="font-size:12px; color:var(--text-secondary); margin-left:8px;">
-                                Código: ${info.code}
-                            </span>
-                        </div>
-                        <div>
-                            <span class="device-status">✅ Conectado</span>
-                            <button class="btn btn-sm btn-danger" onclick="desconectarDispositivo('${id}')" style="margin-left:8px;">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch(e) {
-                console.error('❌ Erro ao carregar dispositivos:', e);
-            }
-        }
-
-        async function desconectarDispositivo(deviceId) {
-            if (!confirm('Desconectar este dispositivo?')) return;
-            
-            try {
-                await fetch(`/api/connection/disconnect/${deviceId}`, { method: 'DELETE' });
-                mostrarStatus('✅ Dispositivo desconectado', 'success');
-                carregarDispositivos();
-            } catch(e) {
-                mostrarStatus('❌ Erro ao desconectar', 'error');
+            } else {
+                mostrarStatus('❌ Gere o QR Code primeiro', 'error');
             }
         }
 
@@ -1135,13 +764,10 @@
                     if(['videos', 'music', 'images', 'files'].includes(tabName)) {
                         carregarArquivos();
                     }
-                    if(tabName === 'connection') {
-                        carregarDispositivos();
-                    }
                 });
             });
 
-            // QR CODE
+            // QR CODE (botão do header)
             document.getElementById('qrBtn').addEventListener('click', gerarQR);
 
             // IP
@@ -1219,22 +845,12 @@
                 carregarStatus();
             });
 
-            socket.on('device_connected', (data) => {
-                carregarDispositivos();
-                mostrarStatus(`📱 ${data.device_id} conectado!`, 'success');
-            });
-
-            socket.on('device_disconnected', (data) => {
-                carregarDispositivos();
-            });
-
             // FECHAR MODAIS
             document.addEventListener('keydown', (e) => {
                 if(e.key === 'Escape') {
                     fecharVideo();
                     fecharQR();
                     fecharAudio();
-                    pararScanner();
                 }
             });
 
@@ -1461,7 +1077,7 @@
         }
 
         // =============================================
-        // QR CODE
+        // QR CODE MODAL
         // =============================================
 
         async function gerarQR() {
@@ -1604,14 +1220,8 @@
         window.copiarIP = copiarIP;
         window.atualizarStatus = atualizarStatus;
         window.copiarUrlStatus = copiarUrlStatus;
-        window.gerarCodigo = gerarCodigo;
-        window.copiarCodigo = copiarCodigo;
-        window.conectarComCodigo = conectarComCodigo;
-        window.desconectarDispositivo = desconectarDispositivo;
-        window.carregarDispositivos = carregarDispositivos;
-        window.iniciarScanner = iniciarScanner;
-        window.pararScanner = pararScanner;
-        window.conectarCodigoLido = conectarCodigoLido;
+        window.gerarQRCodeConexao = gerarQRCodeConexao;
+        window.copiarLinkConexao = copiarLinkConexao;
 
         // =============================================
         // INICIAR
@@ -1622,11 +1232,6 @@
         // Limpar intervalos ao sair
         window.addEventListener('beforeunload', function() {
             if (statusInterval) clearInterval(statusInterval);
-            if (codeTimerInterval) clearInterval(codeTimerInterval);
-            if (scanInterval) clearInterval(scanInterval);
-            if (scannerStream) {
-                scannerStream.getTracks().forEach(track => track.stop());
-            }
         });
     </script>
 </body>
