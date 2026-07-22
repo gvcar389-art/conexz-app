@@ -27,7 +27,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB
 
-# Banco de dados em memória (arquivos ficam enquanto servidor roda)
+# Banco de dados em memória
 db = {'files': {}, 'shared_links': {}}
 device_id = secrets.token_hex(8)
 
@@ -71,7 +71,6 @@ def generate_qr():
     """Gera QR Code com o IP correto"""
     ip = get_local_ip()
     
-    # Se o IP for 127.0.0.1, tenta pegar o IP da rede
     if ip == '127.0.0.1':
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -111,15 +110,11 @@ def upload():
     if file.filename == '':
         return jsonify({'error': 'Nome vazio'}), 400
     
-    # Gerar ID único
     file_id = hashlib.md5(file.filename.encode() + str(time.time()).encode()).hexdigest()
-    
-    # Salvar arquivo fisicamente
     file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{file.filename}")
     file.save(file_path)
     size = os.path.getsize(file_path)
     
-    # Salvar no banco de dados
     db['files'][file_id] = {
         'id': file_id,
         'name': file.filename,
@@ -132,7 +127,6 @@ def upload():
     
     print(f"✅ Arquivo salvo: {file.filename} ({format_size(size)})")
     
-    # Notificar via Socket
     socketio.emit('new_file', {
         'id': file_id,
         'name': file.filename,
@@ -159,7 +153,6 @@ def list_files():
             'size_formatted': info['size_formatted'],
             'date': info['date_formatted']
         })
-    # Ordenar do mais novo para o mais antigo
     files.sort(key=lambda x: x['date'], reverse=True)
     print(f"📂 {len(files)} arquivos listados")
     return jsonify(files)
@@ -174,7 +167,6 @@ def view_file(file_id):
     if not os.path.exists(file_info['path']):
         return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
     
-    # Detectar tipo de arquivo
     filename = file_info['name']
     ext = filename.split('.')[-1].lower() if '.' in filename else ''
     
@@ -222,10 +214,9 @@ def share_file(file_id):
     token = secrets.token_urlsafe(12)
     share_url = f"{request.host_url}api/s/{token}"
     
-    # Salvar link
     db['shared_links'][token] = {
         'file_id': file_id,
-        'expires': time.time() + 86400  # 24 horas
+        'expires': time.time() + 86400
     }
     
     return jsonify({
@@ -277,7 +268,6 @@ def status_completo():
     """Status completo com IP, hora e contagem de arquivos"""
     now = datetime.now()
     
-    # Contar arquivos por tipo
     videos = 0
     musicas = 0
     imagens = 0
@@ -307,6 +297,93 @@ def status_completo():
         'documentos': documentos,
         'status': 'online'
     })
+
+# ==========================================
+# CONEXÃO POR CÓDIGO
+# ==========================================
+
+# Armazenar códigos de conexão
+connection_codes = {}
+connected_devices = {}
+
+def generate_connection_code():
+    """Gera um código de 6 dígitos aleatório"""
+    import random
+    import string
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+@app.route('/api/connection/generate', methods=['POST'])
+def generate_connection():
+    """Gera um novo código de conexão"""
+    code = generate_connection_code()
+    
+    connection_codes[code] = {
+        'created_at': time.time(),
+        'expires_at': time.time() + 300,  # 5 minutos
+        'device_id': device_id,
+        'ip': get_local_ip(),
+        'port': 5001
+    }
+    
+    return jsonify({
+        'code': code,
+        'expires_in': 300,
+        'ip': get_local_ip(),
+        'port': 5001
+    })
+
+@app.route('/api/connection/connect', methods=['POST'])
+def connect_with_code():
+    """Conecta usando um código"""
+    data = request.get_json()
+    code = data.get('code', '').upper().strip()
+    
+    if code not in connection_codes:
+        return jsonify({'error': 'Código inválido'}), 404
+    
+    conn = connection_codes[code]
+    if time.time() > conn['expires_at']:
+        del connection_codes[code]
+        return jsonify({'error': 'Código expirado'}), 410
+    
+    device_id = data.get('device_id', 'desconhecido')
+    connected_devices[device_id] = {
+        'code': code,
+        'connected_at': time.time(),
+        'ip': conn['ip'],
+        'port': conn['port']
+    }
+    
+    socketio.emit('device_connected', {
+        'device_id': device_id,
+        'code': code,
+        'ip': conn['ip']
+    })
+    
+    return jsonify({
+        'success': True,
+        'message': '✅ Dispositivo conectado!',
+        'ip': conn['ip'],
+        'port': conn['port']
+    })
+
+@app.route('/api/connection/status')
+def connection_status():
+    """Verifica o status da conexão"""
+    return jsonify({
+        'connected_devices': len(connected_devices),
+        'devices': connected_devices,
+        'active_codes': len(connection_codes)
+    })
+
+@app.route('/api/connection/disconnect/<device_id>', methods=['DELETE'])
+def disconnect_device(device_id):
+    """Desconecta um dispositivo"""
+    if device_id in connected_devices:
+        del connected_devices[device_id]
+        socketio.emit('device_disconnected', {'device_id': device_id})
+        return jsonify({'message': '✅ Dispositivo desconectado'})
+    return jsonify({'error': 'Dispositivo não encontrado'}), 404
 
 # ==========================================
 # SOCKET.IO EVENTOS
@@ -343,10 +420,12 @@ if __name__ == '__main__':
     ║  📱  DISPOSITIVO: {}                                     ║
     ║  💾  ARQUIVOS: SALVOS LOCALMENTE                           ║
     ║  📂  PASTA:    uploads/                                     ║
+    ║  🔗  CONEXÃO:  QR CODE + CÓDIGO                            ║
     ╚═══════════════════════════════════════════════════════════════╝
     """.format(port, ip, port, device_id[:8]))
     
     print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
+    print("🔑 GERAR CÓDIGO DE CONEXÃO: /api/connection/generate")
     print("📂 Arquivos salvos na pasta 'uploads/'\n")
     
     socketio.run(

@@ -8,6 +8,8 @@ let currentAudio = null;
 let isAudioPlaying = false;
 let currentTheme = '#00d4ff';
 let statusInterval = null;
+let currentCode = null;
+let codeTimerInterval = null;
 
 // ==========================================
 // INICIALIZAÇÃO
@@ -28,6 +30,7 @@ async function init() {
         await loadVideos();
         await loadMusic();
         await loadImages();
+        await carregarDispositivos();
         
         // Configurar eventos
         setupEvents();
@@ -133,6 +136,138 @@ function copiarIP() {
 }
 
 // ==========================================
+// CONEXÃO POR CÓDIGO
+// ==========================================
+
+async function gerarCodigo() {
+    try {
+        const res = await fetch('/api/connection/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        
+        currentCode = data.code;
+        document.getElementById('connectionCode').textContent = data.code;
+        document.getElementById('codeTimer').textContent = '⏳ Válido por 5 minutos';
+        document.getElementById('gerarCodeBtn').innerHTML = '<i class="fas fa-sync"></i> Gerar Novo';
+        
+        iniciarContador();
+        
+        mostrarStatus(`📱 Código gerado: ${data.code}`, 'success');
+    } catch(e) {
+        mostrarStatus('❌ Erro ao gerar código', 'error');
+    }
+}
+
+function iniciarContador() {
+    if (codeTimerInterval) clearInterval(codeTimerInterval);
+    let tempoRestante = 300;
+    
+    codeTimerInterval = setInterval(() => {
+        tempoRestante--;
+        const minutos = Math.floor(tempoRestante / 60);
+        const segundos = tempoRestante % 60;
+        document.getElementById('codeTimer').textContent = 
+            `⏳ Válido por ${minutos}:${segundos.toString().padStart(2, '0')}`;
+        
+        if (tempoRestante <= 0) {
+            clearInterval(codeTimerInterval);
+            document.getElementById('codeTimer').textContent = '⏰ Código expirado';
+            document.getElementById('connectionCode').textContent = '------';
+        }
+    }, 1000);
+}
+
+function copiarCodigo() {
+    const code = document.getElementById('connectionCode').textContent;
+    if (code && code !== '------') {
+        navigator.clipboard.writeText(code);
+        mostrarStatus('✅ Código copiado!', 'success');
+    } else {
+        mostrarStatus('❌ Gere um código primeiro', 'error');
+    }
+}
+
+async function conectarComCodigo() {
+    const input = document.getElementById('connectCodeInput');
+    const code = input.value.toUpperCase().trim();
+    
+    if (!code || code.length !== 6) {
+        mostrarStatus('❌ Digite um código válido de 6 caracteres', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/connection/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                code: code,
+                device_id: 'celular_' + Date.now()
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            mostrarStatus(`✅ Conectado com sucesso! IP: ${data.ip}:${data.port}`, 'success');
+            document.getElementById('connectStatus').innerHTML = 
+                `<span style="color:#48bb78;">✅ Conectado a ${data.ip}:${data.port}</span>`;
+            carregarDispositivos();
+        } else {
+            mostrarStatus(`❌ ${data.error}`, 'error');
+        }
+    } catch(e) {
+        mostrarStatus('❌ Erro ao conectar', 'error');
+    }
+}
+
+async function carregarDispositivos() {
+    try {
+        const res = await fetch('/api/connection/status');
+        const data = await res.json();
+        
+        const list = document.getElementById('connectedDevicesList');
+        if (data.connected_devices === 0) {
+            list.innerHTML = '<p style="color:var(--text-secondary); font-size:14px;">Nenhum dispositivo conectado</p>';
+            return;
+        }
+        
+        list.innerHTML = Object.entries(data.devices).map(([id, info]) => `
+            <div class="device-item">
+                <div class="device-info">
+                    <span style="font-weight:600;">📱 ${id}</span>
+                    <span style="font-size:12px; color:var(--text-secondary); margin-left:8px;">
+                        Código: ${info.code}
+                    </span>
+                </div>
+                <div>
+                    <span class="device-status">✅ Conectado</span>
+                    <button class="btn btn-sm btn-danger" onclick="desconectarDispositivo('${id}')" style="margin-left:8px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch(e) {
+        console.error('❌ Erro ao carregar dispositivos:', e);
+    }
+}
+
+async function desconectarDispositivo(deviceId) {
+    if (!confirm('Desconectar este dispositivo?')) return;
+    
+    try {
+        await fetch(`/api/connection/disconnect/${deviceId}`, { method: 'DELETE' });
+        mostrarStatus('✅ Dispositivo desconectado', 'success');
+        carregarDispositivos();
+    } catch(e) {
+        mostrarStatus('❌ Erro ao desconectar', 'error');
+    }
+}
+
+// ==========================================
 // EVENTOS
 // ==========================================
 
@@ -151,6 +286,7 @@ function setupEvents() {
             if (tab === 'videos') loadVideos();
             if (tab === 'music') loadMusic();
             if (tab === 'images') loadImages();
+            if (tab === 'connection') carregarDispositivos();
         });
     });
     
@@ -275,6 +411,15 @@ function setupEvents() {
         loadMusic();
         loadImages();
         carregarStatus();
+    });
+    
+    socket.on('device_connected', (data) => {
+        carregarDispositivos();
+        mostrarStatus(`📱 ${data.device_id} conectado!`, 'success');
+    });
+
+    socket.on('device_disconnected', (data) => {
+        carregarDispositivos();
     });
     
     // --- AUDIO PROGRESS ---
@@ -783,6 +928,11 @@ window.detectarIP = detectarIP;
 window.copiarIP = copiarIP;
 window.atualizarStatus = atualizarStatus;
 window.copiarUrlStatus = copiarUrlStatus;
+window.gerarCodigo = gerarCodigo;
+window.copiarCodigo = copiarCodigo;
+window.conectarComCodigo = conectarComCodigo;
+window.desconectarDispositivo = desconectarDispositivo;
+window.carregarDispositivos = carregarDispositivos;
 
 // ==========================================
 // INICIAR
@@ -793,4 +943,5 @@ document.addEventListener('DOMContentLoaded', init);
 // Limpar intervalos ao sair
 window.addEventListener('beforeunload', function() {
     if (statusInterval) clearInterval(statusInterval);
+    if (codeTimerInterval) clearInterval(codeTimerInterval);
 });

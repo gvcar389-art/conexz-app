@@ -268,6 +268,80 @@
         .theme-btn:hover { transform: scale(1.1); }
         .theme-btn.active { border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
         
+        /* ===== CONEXÃO POR CÓDIGO ===== */
+        .code-display {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            border: 2px dashed var(--border);
+            margin-bottom: 16px;
+        }
+        .code-display .code {
+            font-size: 48px;
+            font-weight: 800;
+            letter-spacing: 12px;
+            color: var(--accent);
+            font-family: monospace;
+        }
+        .code-display .code-timer {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+        .code-display .code-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .connect-input {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .connect-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            font-family: monospace;
+            text-align: center;
+        }
+        .connect-input input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+        
+        .devices-list {
+            margin-top: 16px;
+        }
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+        .device-item .device-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .device-item .device-status {
+            color: #48bb78;
+            font-size: 12px;
+        }
+        
         /* RESPONSIVE */
         @media (max-width: 768px) {
             .container { padding: 12px; }
@@ -282,6 +356,7 @@
             .audio-info { min-width: 100%; text-align: center; }
             .audio-controls { width: 100%; }
             .modal-content { padding: 20px; }
+            .code-display .code { font-size: 32px; letter-spacing: 8px; }
         }
         @media (max-width: 480px) {
             .container { padding: 10px; }
@@ -359,6 +434,7 @@
             <div class="tab" data-tab="videos">🎬 Vídeos</div>
             <div class="tab" data-tab="music">🎵 Músicas</div>
             <div class="tab" data-tab="images">🖼️ Imagens</div>
+            <div class="tab" data-tab="connection">🔗 Conexão</div>
             <div class="tab" data-tab="settings">⚙️ Config</div>
         </div>
 
@@ -408,6 +484,57 @@
         <div class="tab-content" id="tab-images">
             <h2><i class="fas fa-images"></i> Minhas Imagens</h2>
             <div id="imageGrid" class="media-grid"></div>
+        </div>
+
+        <!-- TAB CONEXÃO -->
+        <div class="tab-content" id="tab-connection">
+            <h2><i class="fas fa-link"></i> Conexão por Código</h2>
+            
+            <div style="display:grid; gap:20px; grid-template-columns: 1fr 1fr;">
+                <!-- GERAR CÓDIGO -->
+                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
+                    <h3 style="margin-bottom:12px; color:var(--accent);">📱 Gerar Código</h3>
+                    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Gere um código de 6 dígitos para conectar seu celular</p>
+                    
+                    <div class="code-display">
+                        <div class="code-label">🔑 CÓDIGO</div>
+                        <div class="code" id="connectionCode">------</div>
+                        <div class="code-timer" id="codeTimer">⏳ Clique em "Gerar Código"</div>
+                    </div>
+                    
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="gerarCodigo()" id="gerarCodeBtn">
+                            <i class="fas fa-sync"></i> Gerar Código
+                        </button>
+                        <button class="btn btn-secondary" onclick="copiarCodigo()" id="copiarCodeBtn">
+                            <i class="fas fa-copy"></i> Copiar
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- CONECTAR -->
+                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
+                    <h3 style="margin-bottom:12px; color:var(--accent);">🔗 Conectar Dispositivo</h3>
+                    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Digite o código de 6 dígitos do outro dispositivo</p>
+                    
+                    <div class="connect-input">
+                        <input type="text" id="connectCodeInput" placeholder="Ex: X7K2P9" maxlength="6">
+                        <button class="btn btn-primary" onclick="conectarComCodigo()">
+                            <i class="fas fa-link"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="connectStatus" style="font-size:14px; color:var(--text-secondary);"></div>
+                </div>
+            </div>
+            
+            <!-- DISPOSITIVOS CONECTADOS -->
+            <div style="margin-top:20px; background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
+                <h3 style="margin-bottom:12px; color:var(--accent);">📡 Dispositivos Conectados</h3>
+                <div class="devices-list" id="connectedDevicesList">
+                    <p style="color:var(--text-secondary); font-size:14px;">Nenhum dispositivo conectado</p>
+                </div>
+            </div>
         </div>
 
         <!-- TAB CONFIG -->
@@ -487,6 +614,8 @@
         let audioAtual = null;
         let audioTocando = false;
         let statusInterval = null;
+        let currentCode = null;
+        let codeTimerInterval = null;
 
         // =============================================
         // INICIALIZAR
@@ -499,6 +628,7 @@
                 document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0,8);
                 await carregarArquivos();
                 await carregarStatus();
+                await carregarDispositivos();
                 configurarEventos();
                 iniciarStatusAutomatico();
                 console.log('✅ ConexZ inicializado!');
@@ -599,6 +729,138 @@
         }
 
         // =============================================
+        // CONEXÃO POR CÓDIGO
+        // =============================================
+
+        async function gerarCodigo() {
+            try {
+                const res = await fetch('/api/connection/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                
+                currentCode = data.code;
+                document.getElementById('connectionCode').textContent = data.code;
+                document.getElementById('codeTimer').textContent = '⏳ Válido por 5 minutos';
+                document.getElementById('gerarCodeBtn').innerHTML = '<i class="fas fa-sync"></i> Gerar Novo';
+                
+                iniciarContador();
+                
+                mostrarStatus(`📱 Código gerado: ${data.code}`, 'success');
+            } catch(e) {
+                mostrarStatus('❌ Erro ao gerar código', 'error');
+            }
+        }
+
+        function iniciarContador() {
+            if (codeTimerInterval) clearInterval(codeTimerInterval);
+            let tempoRestante = 300;
+            
+            codeTimerInterval = setInterval(() => {
+                tempoRestante--;
+                const minutos = Math.floor(tempoRestante / 60);
+                const segundos = tempoRestante % 60;
+                document.getElementById('codeTimer').textContent = 
+                    `⏳ Válido por ${minutos}:${segundos.toString().padStart(2, '0')}`;
+                
+                if (tempoRestante <= 0) {
+                    clearInterval(codeTimerInterval);
+                    document.getElementById('codeTimer').textContent = '⏰ Código expirado';
+                    document.getElementById('connectionCode').textContent = '------';
+                }
+            }, 1000);
+        }
+
+        function copiarCodigo() {
+            const code = document.getElementById('connectionCode').textContent;
+            if (code && code !== '------') {
+                navigator.clipboard.writeText(code);
+                mostrarStatus('✅ Código copiado!', 'success');
+            } else {
+                mostrarStatus('❌ Gere um código primeiro', 'error');
+            }
+        }
+
+        async function conectarComCodigo() {
+            const input = document.getElementById('connectCodeInput');
+            const code = input.value.toUpperCase().trim();
+            
+            if (!code || code.length !== 6) {
+                mostrarStatus('❌ Digite um código válido de 6 caracteres', 'error');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/connection/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        code: code,
+                        device_id: 'celular_' + Date.now()
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    mostrarStatus(`✅ Conectado com sucesso! IP: ${data.ip}:${data.port}`, 'success');
+                    document.getElementById('connectStatus').innerHTML = 
+                        `<span style="color:#48bb78;">✅ Conectado a ${data.ip}:${data.port}</span>`;
+                    carregarDispositivos();
+                } else {
+                    mostrarStatus(`❌ ${data.error}`, 'error');
+                }
+            } catch(e) {
+                mostrarStatus('❌ Erro ao conectar', 'error');
+            }
+        }
+
+        async function carregarDispositivos() {
+            try {
+                const res = await fetch('/api/connection/status');
+                const data = await res.json();
+                
+                const list = document.getElementById('connectedDevicesList');
+                if (data.connected_devices === 0) {
+                    list.innerHTML = '<p style="color:var(--text-secondary); font-size:14px;">Nenhum dispositivo conectado</p>';
+                    return;
+                }
+                
+                list.innerHTML = Object.entries(data.devices).map(([id, info]) => `
+                    <div class="device-item">
+                        <div class="device-info">
+                            <span style="font-weight:600;">📱 ${id}</span>
+                            <span style="font-size:12px; color:var(--text-secondary); margin-left:8px;">
+                                Código: ${info.code}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="device-status">✅ Conectado</span>
+                            <button class="btn btn-sm btn-danger" onclick="desconectarDispositivo('${id}')" style="margin-left:8px;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) {
+                console.error('❌ Erro ao carregar dispositivos:', e);
+            }
+        }
+
+        async function desconectarDispositivo(deviceId) {
+            if (!confirm('Desconectar este dispositivo?')) return;
+            
+            try {
+                await fetch(`/api/connection/disconnect/${deviceId}`, { method: 'DELETE' });
+                mostrarStatus('✅ Dispositivo desconectado', 'success');
+                carregarDispositivos();
+            } catch(e) {
+                mostrarStatus('❌ Erro ao desconectar', 'error');
+            }
+        }
+
+        // =============================================
         // CONFIGURAR EVENTOS
         // =============================================
 
@@ -614,6 +876,9 @@
                     if(target) target.classList.add('active');
                     if(['videos', 'music', 'images', 'files'].includes(tabName)) {
                         carregarArquivos();
+                    }
+                    if(tabName === 'connection') {
+                        carregarDispositivos();
                     }
                 });
             });
@@ -694,6 +959,15 @@
             socket.on('file_deleted', () => {
                 carregarArquivos();
                 carregarStatus();
+            });
+
+            socket.on('device_connected', (data) => {
+                carregarDispositivos();
+                mostrarStatus(`📱 ${data.device_id} conectado!`, 'success');
+            });
+
+            socket.on('device_disconnected', (data) => {
+                carregarDispositivos();
             });
 
             // FECHAR MODAIS
@@ -1071,6 +1345,11 @@
         window.copiarIP = copiarIP;
         window.atualizarStatus = atualizarStatus;
         window.copiarUrlStatus = copiarUrlStatus;
+        window.gerarCodigo = gerarCodigo;
+        window.copiarCodigo = copiarCodigo;
+        window.conectarComCodigo = conectarComCodigo;
+        window.desconectarDispositivo = desconectarDispositivo;
+        window.carregarDispositivos = carregarDispositivos;
 
         // =============================================
         // INICIAR
@@ -1081,6 +1360,7 @@
         // Limpar intervalos ao sair
         window.addEventListener('beforeunload', function() {
             if (statusInterval) clearInterval(statusInterval);
+            if (codeTimerInterval) clearInterval(codeTimerInterval);
         });
     </script>
 </body>
