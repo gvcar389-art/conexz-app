@@ -12,6 +12,9 @@ import secrets
 import json
 from datetime import datetime
 import glob
+import random
+import string
+from PIL import Image  # ← IMPORTANTE!
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'conexz-secret'
@@ -308,8 +311,6 @@ connected_devices = {}
 
 def generate_connection_code():
     """Gera um código de 6 dígitos aleatório"""
-    import random
-    import string
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
 @app.route('/api/connection/generate', methods=['POST'])
@@ -386,6 +387,76 @@ def disconnect_device(device_id):
     return jsonify({'error': 'Dispositivo não encontrado'}), 404
 
 # ==========================================
+# QR CODE PARA CÓDIGO DE CONEXÃO
+# ==========================================
+
+@app.route('/api/connection/qr/<code>')
+def connection_qr(code):
+    """Gera QR Code para o código de conexão"""
+    ip = get_local_ip()
+    data = json.dumps({
+        'code': code,
+        'ip': ip,
+        'port': 5001,
+        'device_id': device_id
+    })
+    
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(data)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
+    
+    return jsonify({
+        'qr': qr_base64,
+        'code': code,
+        'url': f"http://{ip}:5001"
+    })
+
+# ==========================================
+# SCAN QR CODE (CÂMERA)
+# ==========================================
+
+@app.route('/api/scan-qr', methods=['POST'])
+def scan_qr():
+    """Decodifica QR Code da imagem enviada pelo celular"""
+    try:
+        from pyzbar.pyzbar import decode
+        
+        data = request.get_json()
+        image_data = data.get('image', '')
+        
+        if not image_data:
+            return jsonify({'error': 'Nenhuma imagem enviada'}), 400
+        
+        # Remover cabeçalho base64
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # Tentar decodificar QR Code
+        decoded = decode(image)
+        
+        if decoded:
+            for obj in decoded:
+                try:
+                    qr_data = json.loads(obj.data.decode('utf-8'))
+                    if 'code' in qr_data:
+                        return jsonify({'code': qr_data['code']})
+                except:
+                    pass
+        
+        return jsonify({'error': 'Nenhum código encontrado'}), 404
+    except Exception as e:
+        print(f"❌ Erro no scan: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ==========================================
 # SOCKET.IO EVENTOS
 # ==========================================
 
@@ -420,12 +491,14 @@ if __name__ == '__main__':
     ║  📱  DISPOSITIVO: {}                                     ║
     ║  💾  ARQUIVOS: SALVOS LOCALMENTE                           ║
     ║  📂  PASTA:    uploads/                                     ║
-    ║  🔗  CONEXÃO:  QR CODE + CÓDIGO                            ║
+    ║  🔗  CONEXÃO:  QR CODE + CÓDIGO + CÂMERA                   ║
+    ║  📷  SCAN:     ESCANEIE QR CODE COM A CÂMERA               ║
     ╚═══════════════════════════════════════════════════════════════╝
     """.format(port, ip, port, device_id[:8]))
     
     print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
     print("🔑 GERAR CÓDIGO DE CONEXÃO: /api/connection/generate")
+    print("📷 ESCANEAR QR CODE: Use a câmera do celular")
     print("📂 Arquivos salvos na pasta 'uploads/'\n")
     
     socketio.run(

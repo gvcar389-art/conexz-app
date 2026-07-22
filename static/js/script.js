@@ -10,6 +10,10 @@ let currentTheme = '#00d4ff';
 let statusInterval = null;
 let currentCode = null;
 let codeTimerInterval = null;
+let scannerActive = false;
+let scannerStream = null;
+let scanInterval = null;
+let scannedCode = null;
 
 // ==========================================
 // INICIALIZAÇÃO
@@ -152,11 +156,31 @@ async function gerarCodigo() {
         document.getElementById('codeTimer').textContent = '⏳ Válido por 5 minutos';
         document.getElementById('gerarCodeBtn').innerHTML = '<i class="fas fa-sync"></i> Gerar Novo';
         
+        // Gerar QR Code do código
+        await gerarQRCode(data.code);
+        
         iniciarContador();
         
         mostrarStatus(`📱 Código gerado: ${data.code}`, 'success');
     } catch(e) {
         mostrarStatus('❌ Erro ao gerar código', 'error');
+    }
+}
+
+async function gerarQRCode(code) {
+    try {
+        const res = await fetch(`/api/connection/qr/${code}`);
+        const data = await res.json();
+        
+        const container = document.getElementById('codeQRContainer');
+        const image = document.getElementById('codeQRImage');
+        
+        if (data.qr) {
+            image.src = `data:image/png;base64,${data.qr}`;
+            container.style.display = 'block';
+        }
+    } catch(e) {
+        console.error('❌ Erro ao gerar QR Code:', e);
     }
 }
 
@@ -175,6 +199,7 @@ function iniciarContador() {
             clearInterval(codeTimerInterval);
             document.getElementById('codeTimer').textContent = '⏰ Código expirado';
             document.getElementById('connectionCode').textContent = '------';
+            document.getElementById('codeQRContainer').style.display = 'none';
         }
     }, 1000);
 }
@@ -186,6 +211,129 @@ function copiarCodigo() {
         mostrarStatus('✅ Código copiado!', 'success');
     } else {
         mostrarStatus('❌ Gere um código primeiro', 'error');
+    }
+}
+
+// ==========================================
+// SCANNER (CÂMERA)
+// ==========================================
+
+async function iniciarScanner() {
+    try {
+        const video = document.getElementById('scannerVideo');
+        
+        // Iniciar câmera
+        scannerStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+        video.srcObject = scannerStream;
+        await video.play();
+        
+        scannerActive = true;
+        document.getElementById('scanBtn').style.display = 'none';
+        document.getElementById('stopScanBtn').style.display = 'inline-flex';
+        document.getElementById('scanStatus').textContent = '📷 Câmera ativa. Aponte para o QR Code...';
+        document.getElementById('scanStatus').style.color = '#48bb78';
+        
+        // Iniciar leitura
+        startScanning();
+        
+    } catch(e) {
+        console.error('❌ Erro ao iniciar câmera:', e);
+        document.getElementById('scanStatus').textContent = '❌ Não foi possível acessar a câmera. Permita o acesso ou use o código manualmente.';
+        document.getElementById('scanStatus').style.color = '#fc8181';
+    }
+}
+
+function startScanning() {
+    if (scanInterval) clearInterval(scanInterval);
+    
+    scanInterval = setInterval(async () => {
+        if (!scannerActive) return;
+        
+        const video = document.getElementById('scannerVideo');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = canvas.toDataURL('image/png');
+        
+        try {
+            const res = await fetch('/api/scan-qr', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            });
+            const data = await res.json();
+            
+            if (data.code) {
+                // Código encontrado!
+                pararScanner();
+                document.getElementById('scannedCodeDisplay').style.display = 'block';
+                document.getElementById('scannedCode').textContent = data.code;
+                document.getElementById('scanStatus').textContent = '✅ Código lido com sucesso!';
+                document.getElementById('scanStatus').style.color = '#48bb78';
+                
+                scannedCode = data.code;
+                
+                // Vibrar o celular (se suportado)
+                if (navigator.vibrate) {
+                    navigator.vibrate(200);
+                }
+            }
+        } catch(e) {
+            // Ignorar erros de leitura
+        }
+    }, 500);
+}
+
+function pararScanner() {
+    scannerActive = false;
+    if (scanInterval) {
+        clearInterval(scanInterval);
+        scanInterval = null;
+    }
+    if (scannerStream) {
+        scannerStream.getTracks().forEach(track => track.stop());
+        scannerStream = null;
+    }
+    document.getElementById('scannerVideo').srcObject = null;
+    document.getElementById('scanBtn').style.display = 'inline-flex';
+    document.getElementById('stopScanBtn').style.display = 'none';
+    document.getElementById('scanStatus').textContent = '📷 Câmera desativada';
+    document.getElementById('scanStatus').style.color = 'var(--text-secondary)';
+}
+
+async function conectarCodigoLido() {
+    if (!scannedCode) {
+        mostrarStatus('❌ Nenhum código foi lido', 'error');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/connection/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                code: scannedCode,
+                device_id: 'celular_' + Date.now()
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            mostrarStatus(`✅ Conectado com sucesso!`, 'success');
+            document.getElementById('scannedCodeDisplay').style.display = 'none';
+            pararScanner();
+            carregarDispositivos();
+        } else {
+            mostrarStatus(`❌ ${data.error}`, 'error');
+        }
+    } catch(e) {
+        mostrarStatus('❌ Erro ao conectar', 'error');
     }
 }
 
@@ -438,6 +586,7 @@ function setupEvents() {
             closeVideoPlayer();
             fecharQR();
             closeAudioPlayer();
+            pararScanner();
         }
     });
     
@@ -933,6 +1082,9 @@ window.copiarCodigo = copiarCodigo;
 window.conectarComCodigo = conectarComCodigo;
 window.desconectarDispositivo = desconectarDispositivo;
 window.carregarDispositivos = carregarDispositivos;
+window.iniciarScanner = iniciarScanner;
+window.pararScanner = pararScanner;
+window.conectarCodigoLido = conectarCodigoLido;
 
 // ==========================================
 // INICIAR
@@ -944,4 +1096,8 @@ document.addEventListener('DOMContentLoaded', init);
 window.addEventListener('beforeunload', function() {
     if (statusInterval) clearInterval(statusInterval);
     if (codeTimerInterval) clearInterval(codeTimerInterval);
+    if (scanInterval) clearInterval(scanInterval);
+    if (scannerStream) {
+        scannerStream.getTracks().forEach(track => track.stop());
+    }
 });
