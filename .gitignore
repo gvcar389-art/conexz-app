@@ -1,94 +1,45 @@
-# ==========================================
-# ARQUIVOS DO SISTEMA
-# ==========================================
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# Mac
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# ==========================================
-# PYTHON
-# ==========================================
-
-# Arquivos compilados
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
-# Distribuições
-*.egg-info/
-*.egg
-dist/
-build/
-
-# Ambiente virtual
-venv/
-env/
-.venv/
-
-# ==========================================
-# SUPABASE / CHAVES SECRETAS (NUNCA COMPARTILHAR!)
-# ==========================================
-
-.env
-.env.local
-.env.production
-*.key
-*.pem
-
-# ==========================================
-# ARQUIVOS DO APP
-# ==========================================
-
-# Arquivos enviados pelos usuários
-uploads/
-*.tmp
-
-# Logs
+# Miscellaneous
+*.class
 *.log
-*.log.*
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
 
-# ==========================================
-# EDITORES E IDE
-# ==========================================
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# IntelliJ / PyCharm
-.idea/
+# IntelliJ related
 *.iml
+*.ipr
+*.iws
+.idea/
 
-# Sublime Text
-*.sublime-workspace
-*.sublime-project
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
 
-# ==========================================
-# FLUTTER (se tiver)
-# ==========================================
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
 
-flutter/
-*.apk
-*.aab
-*.ipa
+# Symbolication related
+app.*.symbols
 
-# ==========================================
-# GITHUB
-# ==========================================
+# Obfuscation related
+app.*.map.json
 
-# GitHub Actions
-.github/
-
-# ==========================================
-# RENDER (hospedagem)
-# ==========================================
-
-.render/
-*.render.yaml
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
