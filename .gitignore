@@ -44,3 +44,42 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .vercel
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+.venv/
+vencel/
+
+# Flutter
+android/
+ios/
+lib/
+linux/
+macos/
+test/
+web/
+windows/
+*.iml
+pubspec.lock
+pubspec.yaml
+analysis_options.yaml
+.metadata
+.dart_tool/
+.flutter-plugins-dependencies
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads e temporários
+uploads/
+*.tmp
+*.log
+
+# Ngrok
+ngrok.exe
