@@ -12,11 +12,19 @@ import secrets
 import json
 from datetime import datetime
 import glob
-
+from flask import send_from_directory
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'conexz-secret'
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory('static', 'manifest.json')
+
+@app.route('/sw.js')
+def serve_sw():
+    return send_from_directory('.', 'sw.js')
 
 # ==========================================
 # CONFIGURAÇÕES
