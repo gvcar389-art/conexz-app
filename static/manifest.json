@@ -1,25 +1,21 @@
 {
-  "name": "ConexZ",
-  "short_name": "ConexZ",
-  "description": "Transferência Inteligente de Arquivos",
-  "theme_color": "#00d4ff",
-  "background_color": "#0a0a1a",
-  "display": "standalone",
-  "orientation": "portrait",
-  "scope": "/",
+  "name": "Conexz - Transferência Inteligente",
+  "short_name": "Conexz",
+  "description": "Conexz - Plataforma de transferência de arquivos e produtividade",
   "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
   "icons": [
     {
-      "src": "/static/icon-192.png",
+      "src": "/static/js/icon_192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
-      "src": "/static/icon-512.png",
+      "src": "/static/js/icon_512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }

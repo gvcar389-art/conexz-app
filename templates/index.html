@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ConexZ - Transferência Inteligente</title>
     
-    <!-- ⭐ CONFIGURAÇÕES PARA O APP (NÃO MEXA) ⭐ -->
-    <link rel="manifest" href="/static/manifest.json">
+    <!-- ⭐ CONFIGURAÇÕES PARA O PWA ⭐ -->
+    <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -591,7 +591,7 @@
     <!-- SERVICE WORKER REGISTRO -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js')
+            navigator.serviceWorker.register('/sw.js')
                 .then(() => console.log('✅ Service Worker registrado!'))
                 .catch(err => console.log('❌ Service Worker erro:', err));
         }
