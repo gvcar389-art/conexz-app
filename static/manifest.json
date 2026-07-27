@@ -4,16 +4,16 @@
   "description": "Conexz - Plataforma de transferência de arquivos e produtividade",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#0a0a1a",
+  "theme_color": "#00d4ff",
   "icons": [
     {
-      "src": "/static/js/icon_192.png",
+      "src": "/static/icons/launchericon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/static/js/icon_512.png",
+      "src": "/static/icons/launchericon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
