@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import qrcode
@@ -47,6 +47,25 @@ def format_size(bytes):
             return f"{bytes:.1f} {unit}"
         bytes /= 1024
     return f"{bytes:.1f} TB"
+
+# ==========================================
+# ROTAS DO PWA (NOVAS)
+# ==========================================
+
+@app.route('/manifest.json')
+def serve_manifest():
+    """Serve o manifesto do PWA"""
+    return send_from_directory('static', 'manifest.json')
+
+@app.route('/sw.js')
+def serve_sw():
+    """Serve o Service Worker"""
+    return send_from_directory('.', 'sw.js')
+
+@app.route('/offline')
+def offline():
+    """Página offline do PWA"""
+    return render_template('offline.html')
 
 # ==========================================
 # ROTAS DA API
