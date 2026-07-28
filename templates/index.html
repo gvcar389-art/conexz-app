@@ -4,10 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ConexZ - Transferência Inteligente</title>
+    
+    <!-- ⭐ CONFIGURAÇÕES PARA O PWA ⭐ -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#00d4ff">
+    
+    <!-- BIBLIOTECAS EXTERNAS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
+        /* ============================================
+           RESET E CONFIGURAÇÕES GERAIS
+           ============================================ */
+        
+       * { margin:0; padding:0; box-sizing:border-box; }
         :root {
             --bg-primary: #0a0a1a;
             --bg-secondary: #12122a;
@@ -573,6 +587,15 @@
             <button class="btn btn-secondary" onclick="copiarLink()"><i class="fas fa-copy"></i> Copiar Link</button>
         </div>
     </div>
+
+    <!-- SERVICE WORKER REGISTRO -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('✅ Service Worker registrado!'))
+                .catch(err => console.log('❌ Service Worker erro:', err));
+        }
+    </script>
 
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
@@ -1233,6 +1256,13 @@
         window.addEventListener('beforeunload', function() {
             if (statusInterval) clearInterval(statusInterval);
         });
-    </script>
+   </script>
+   <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(() => console.log('✅ Service Worker registrado!'))
+            .catch(err => console.log('❌ Service Worker erro:', err));
+    }
+</script>
 </body>
 </html>
