@@ -1,8 +1,8 @@
 // ==========================================
-// CONEXZ - SERVICE WORKER
+// CONEXZ - SERVICE WORKER OTIMIZADO
 // ==========================================
 
-const CACHE_NAME = 'conexz-v3'; // Mude a versão
+const CACHE_NAME = 'conexz-v3';
 const urlsToCache = [
   '/',
   '/static/css/style.css',
