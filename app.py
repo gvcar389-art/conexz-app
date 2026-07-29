@@ -49,23 +49,16 @@ def format_size(bytes):
     return f"{bytes:.1f} TB"
 
 # ==========================================
-# ROTAS DO PWA (NOVAS)
+# ROTAS DO PWA
 # ==========================================
 
 @app.route('/manifest.json')
 def serve_manifest():
-    """Serve o manifesto do PWA"""
     return send_from_directory('static', 'manifest.json')
 
 @app.route('/sw.js')
 def serve_sw():
-    """Serve o Service Worker"""
     return send_from_directory('.', 'sw.js')
-
-@app.route('/offline')
-def offline():
-    """Página offline do PWA"""
-    return render_template('offline.html')
 
 # ==========================================
 # ROTAS DA API
@@ -85,26 +78,13 @@ def device():
 
 @app.route('/api/qr')
 def generate_qr():
-    """Gera QR Code com o IP correto para conexão"""
-    ip = get_local_ip()
+    """Gera QR Code com a URL correta do Render"""
+    # Usa a URL pública do Render
+    url = "https://conexz-app.onrender.com"
     
-    if ip == '127.0.0.1':
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-        except:
-            ip = '127.0.0.1'
-    
-    data = json.dumps({
-        'device_id': device_id,
-        'ip': ip,
-        'port': 5001
-    })
-    
+    # Gera QR Code com a URL
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(data)
+    qr.add_data(url)
     qr.make(fit=True)
     
     img = qr.make_image(fill_color="black", back_color="white")
@@ -114,12 +94,11 @@ def generate_qr():
     
     return jsonify({
         'qr': qr_base64,
-        'url': f"http://{ip}:5001"
+        'url': url
     })
 
 @app.route('/api/upload', methods=['POST'])
 def upload():
-    """Upload de arquivo com salvamento permanente"""
     if 'file' not in request.files:
         return jsonify({'error': 'Nenhum arquivo'}), 400
     
@@ -142,8 +121,6 @@ def upload():
         'date_formatted': datetime.now().strftime('%d/%m/%Y %H:%M')
     }
     
-    print(f"✅ Arquivo salvo: {file.filename} ({format_size(size)})")
-    
     socketio.emit('new_file', {
         'id': file_id,
         'name': file.filename,
@@ -160,7 +137,6 @@ def upload():
 
 @app.route('/api/files')
 def list_files():
-    """Lista todos os arquivos salvos"""
     files = []
     for file_id, info in db['files'].items():
         files.append({
@@ -171,12 +147,10 @@ def list_files():
             'date': info['date_formatted']
         })
     files.sort(key=lambda x: x['date'], reverse=True)
-    print(f"📂 {len(files)} arquivos listados")
     return jsonify(files)
 
 @app.route('/api/view/<file_id>')
 def view_file(file_id):
-    """Visualizar arquivo"""
     if file_id not in db['files']:
         return jsonify({'error': 'Arquivo não encontrado'}), 404
     
@@ -208,7 +182,6 @@ def view_file(file_id):
 
 @app.route('/api/download/<file_id>')
 def download_file(file_id):
-    """Baixar arquivo"""
     if file_id not in db['files']:
         return jsonify({'error': 'Arquivo não encontrado'}), 404
     
@@ -224,7 +197,6 @@ def download_file(file_id):
 
 @app.route('/api/share/<file_id>')
 def share_file(file_id):
-    """Criar link compartilhável"""
     if file_id not in db['files']:
         return jsonify({'error': 'Arquivo não encontrado'}), 404
     
@@ -243,7 +215,6 @@ def share_file(file_id):
 
 @app.route('/api/s/<token>')
 def shared_access(token):
-    """Acessar link compartilhável"""
     if token not in db['shared_links']:
         return jsonify({'error': 'Link inválido'}), 404
     
@@ -256,7 +227,6 @@ def shared_access(token):
 
 @app.route('/api/delete/<file_id>', methods=['DELETE'])
 def delete_file(file_id):
-    """Deletar arquivo"""
     if file_id not in db['files']:
         return jsonify({'error': 'Arquivo não encontrado'}), 404
     
@@ -271,7 +241,6 @@ def delete_file(file_id):
 
 @app.route('/api/status')
 def status():
-    """Status do servidor"""
     return jsonify({
         'status': 'online',
         'device': device_id,
@@ -282,7 +251,6 @@ def status():
 
 @app.route('/api/status-completo')
 def status_completo():
-    """Status completo com IP, hora e contagem de arquivos"""
     now = datetime.now()
     
     videos = 0
@@ -324,14 +292,12 @@ def handle_connect():
     device_id = request.args.get('device_id')
     if device_id:
         emit('device_connected', {'device_id': device_id}, broadcast=True)
-        print(f"📱 Dispositivo conectado: {device_id[:8]}...")
 
 @socketio.on('disconnect')
 def handle_disconnect():
     device_id = request.args.get('device_id')
     if device_id:
         emit('device_disconnected', {'device_id': device_id}, broadcast=True)
-        print(f"📱 Dispositivo desconectado: {device_id[:8]}...")
 
 # ==========================================
 # INICIAR SERVIDOR
@@ -341,18 +307,18 @@ if __name__ == '__main__':
     port = 5001
     ip = get_local_ip()
     
-    print("""
+    print(f"""
     ╔═══════════════════════════════════════════════════════════════╗
     ║   📱 CONEXZ - TRANSFERÊNCIA INTELIGENTE                     ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║  🌐  LOCAL:    http://localhost:{}                           ║
-    ║  📱  CELULAR:  http://{}:{}                ║
-    ║  📱  DISPOSITIVO: {}                                     ║
+    ║  🌐  LOCAL:    http://localhost:{port}                           ║
+    ║  📱  CELULAR:  http://{ip}:{port}                ║
+    ║  📱  DISPOSITIVO: {device_id[:8]}                                     ║
     ║  💾  ARQUIVOS: SALVOS LOCALMENTE                           ║
     ║  📂  PASTA:    uploads/                                     ║
     ║  🔗  CONEXÃO:  QR CODE                                     ║
     ╚═══════════════════════════════════════════════════════════════╝
-    """.format(port, ip, port, device_id[:8]))
+    """)
     
     print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
     print("📷 ESCANEIE O QR CODE PARA CONECTAR")
