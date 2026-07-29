@@ -1,333 +1,1144 @@
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
-from flask_socketio import SocketIO, emit
-from flask_cors import CORS
-import qrcode
-import io
-import base64
-import os
-import hashlib
-import time
-import socket
-import secrets
-import json
-from datetime import datetime
-import glob
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ConexZ - Transferência Inteligente</title>
+    
+    <!-- ⭐ CONFIGURAÇÕES PARA O PWA ⭐ -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#00d4ff">
+    
+    <!-- BIBLIOTECAS EXTERNAS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        :root {
+            --bg-primary: #0a0a1a;
+            --bg-secondary: #12122a;
+            --bg-card: #1a1a3e;
+            --bg-hover: #252550;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --text-muted: #6a7a8e;
+            --accent: #00d4ff;
+            --border: #2a2a5a;
+            --shadow: 0 8px 32px rgba(0,0,0,0.4);
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--bg-secondary); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 24px; box-shadow: var(--shadow); flex-wrap: wrap; gap: 12px; }
+        .logo { display: flex; align-items: center; gap: 16px; }
+        .logo-icon { width: 48px; height: 48px; background: var(--accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; }
+        .logo h1 { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, var(--accent), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .subtitle { font-size: 12px; color: var(--text-secondary); font-weight: 400; -webkit-text-fill-color: var(--text-secondary); }
+        
+        .header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .device-badge { background: var(--bg-card); padding: 8px 16px; border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid var(--border); }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-family: inherit; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3); }
+        .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-hover); }
+        .btn-danger { background: #e53e3e; color: #fff; }
+        .btn-danger:hover { background: #c53030; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        
+        .status-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .status-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .status-title i { color: var(--accent); }
+        .status-badge {
+            font-size: 12px;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(72, 187, 120, 0.2);
+            color: #48bb78;
+        }
+        .status-badge.offline {
+            background: rgba(229, 62, 62, 0.2);
+            color: #fc8181;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+        .status-item {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .status-item:hover { border-color: var(--accent); }
+        .status-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+        .status-sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .status-sub span {
+            background: var(--bg-card);
+            padding: 2px 10px;
+            border-radius: 10px;
+        }
+        .status-actions { display: flex; gap: 8px; }
+        
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; border-radius: 12px; cursor: pointer; background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary); transition: var(--transition); font-size: 14px; font-weight: 500; }
+        .tab:hover { border-color: var(--accent); color: #fff; }
+        .tab.active { background: var(--accent); border-color: var(--accent); color: #0a0a1a; font-weight: 600; }
+        .badge { background: var(--accent); color: #0a0a1a; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+        
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-content h2 { margin-bottom: 24px; font-weight: 600; display: flex; align-items: center; gap: 12px; font-size: 20px; }
+        .tab-content h2 i { color: var(--accent); }
+        
+        .upload-area { border: 3px dashed var(--border); border-radius: var(--radius); padding: 60px 40px; text-align: center; cursor: pointer; transition: var(--transition); background: var(--bg-primary); }
+        .upload-area:hover { border-color: var(--accent); background: var(--bg-card); }
+        .upload-area.dragover { border-color: var(--accent); background: var(--bg-card); transform: scale(1.02); }
+        .upload-icon i { font-size: 56px; color: var(--accent); margin-bottom: 16px; }
+        .upload-area h3 { font-size: 20px; margin-bottom: 8px; }
+        .upload-area p { color: var(--text-secondary); margin-bottom: 12px; }
+        .upload-area input { display: none; }
+        .upload-info { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+        
+        .progress-container { margin-top: 20px; display: flex; align-items: center; gap: 16px; }
+        .progress-bar { flex: 1; height: 6px; background: var(--border); border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; border-radius: 10px; }
+        #progressText { font-size: 14px; color: var(--text-secondary); min-width: 40px; }
+        
+        .file-toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .search-box { flex: 1; display: flex; align-items: center; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px; padding: 0 16px; transition: var(--transition); min-width: 150px; }
+        .search-box:focus-within { border-color: var(--accent); }
+        .search-box i { color: var(--text-muted); font-size: 14px; }
+        .search-box input { background: transparent; border: none; padding: 12px 12px; color: var(--text-primary); font-size: 14px; font-family: inherit; flex: 1; outline: none; }
+        
+        .file-list { display: grid; gap: 10px; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border); transition: var(--transition); flex-wrap: wrap; gap: 8px; }
+        .file-item:hover { transform: translateX(4px); border-color: var(--accent); }
+        .file-info { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 150px; }
+        .file-info i { font-size: 24px; color: var(--accent); width: 32px; text-align: center; }
+        .file-details { flex: 1; min-width: 0; }
+        .file-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-meta { font-size: 12px; color: var(--text-secondary); }
+        .file-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+        
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; padding-top: 8px; }
+        .media-card { background: var(--bg-primary); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); transition: var(--transition); cursor: pointer; }
+        .media-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+        .media-preview { width: 100%; height: 120px; background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--accent); }
+        .media-card video { width: 100%; height: 120px; object-fit: cover; background: #000; }
+        .media-info { padding: 12px 16px; }
+        .media-title { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .media-meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg-secondary); padding: 32px 40px; border-radius: var(--radius); width: 90%; max-width: 450px; border: 1px solid var(--border); text-align: center; position: relative; }
+        .modal-content .close { position: absolute; top: 12px; right: 16px; font-size: 24px; cursor: pointer; color: var(--text-secondary); transition: var(--transition); background: none; border: none; }
+        .modal-content .close:hover { color: #fff; transform: rotate(90deg); }
+        .modal-content h2 { margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .qr-container img { max-width: 220px; border-radius: 12px; border: 3px solid var(--accent); }
+        .qr-url { font-size: 12px; color: var(--accent); background: var(--bg-primary); padding: 8px 12px; border-radius: 8px; margin: 8px 0 16px; word-break: break-all; }
+        
+        .video-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
+        .video-modal.active { display: flex; }
+        .video-modal-content { width: 90%; max-width: 900px; position: relative; }
+        .video-modal-content video { width: 100%; border-radius: var(--radius); background: #000; max-height: 80vh; }
+        .video-close { position: absolute; top: -50px; right: 0; background: none; border: none; color: #fff; font-size: 30px; cursor: pointer; transition: var(--transition); }
+        .video-close:hover { transform: rotate(90deg); color: var(--accent); }
+        .video-actions { display: flex; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+        
+        .audio-player { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); border: 1px solid var(--accent); border-radius: var(--radius); padding: 12px 20px; z-index: 999; box-shadow: 0 8px 40px rgba(0,212,255,0.15); min-width: 350px; max-width: 600px; animation: slideUp 0.4s ease; display: none; }
+        @keyframes slideUp { from { transform: translateX(-50%) translateY(80px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        .audio-player-content { display: flex; align-items: center; gap: 12px; }
+        .audio-info { flex: 1; min-width: 80px; }
+        .audio-title { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .audio-controls { display: flex; align-items: center; gap: 8px; flex: 2; }
+        .audio-btn { background: none; border: none; color: #fff; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; transition: var(--transition); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+        .audio-btn:hover { background: var(--accent); color: #0a0a1a; }
+        .audio-btn.audio-close:hover { background: #e53e3e; color: #fff; }
+        .audio-progress { flex: 1; height: 4px; -webkit-appearance: none; background: var(--border); border-radius: 4px; outline: none; min-width: 60px; }
+        .audio-progress::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+        .audio-time { display: flex; gap: 6px; font-size: 11px; color: var(--text-secondary); min-width: 60px; }
+        
+        .status { padding: 12px 16px; border-radius: 12px; margin-top: 12px; display: none; font-size: 14px; }
+        .status.success { display: block; background: rgba(72,187,120,0.15); border: 1px solid #48bb78; color: #48bb78; }
+        .status.error { display: block; background: rgba(229,62,62,0.15); border: 1px solid #fc8181; color: #fc8181; }
+        .status.info { display: block; background: rgba(0,212,255,0.15); border: 1px solid var(--accent); color: var(--accent); }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+        .empty-state i { font-size: 48px; color: var(--accent); margin-bottom: 16px; }
+        
+        .setting-card { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; flex-wrap: wrap; gap: 12px; }
+        .setting-card .info h3 { font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .setting-card .info p { font-size: 12px; color: var(--text-secondary); }
+        
+        .toggle { position: relative; width: 48px; height: 28px; flex-shrink: 0; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle label { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 28px; transition: var(--transition); }
+        .toggle label:before { content: ""; position: absolute; height: 20px; width: 20px; left: 4px; bottom: 4px; background: #fff; border-radius: 50%; transition: var(--transition); }
+        .toggle input:checked + label { background: var(--accent); }
+        .toggle input:checked + label:before { transform: translateX(20px); }
+        
+        .theme-selector { display: flex; gap: 8px; flex-wrap: wrap; }
+        .theme-btn { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: var(--transition); }
+        .theme-btn:hover { transform: scale(1.1); }
+        .theme-btn.active { border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+        
+        #qrCodeImage {
+            max-width: 200px;
+            border-radius: 12px;
+            border: 2px solid var(--accent);
+            margin: 0 auto;
+        }
+        #qrCodeDisplay {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px dashed var(--border);
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #manualIp {
+            font-size: 14px;
+            color: var(--accent);
+            font-family: monospace;
+            word-break: break-all;
+        }
+        
+        @media (max-width: 768px) {
+            .container { padding: 12px; }
+            header { flex-direction: column; text-align: center; }
+            .tabs { gap: 4px; justify-content: center; }
+            .tab { font-size: 12px; padding: 8px 14px; }
+            .file-item { flex-direction: column; align-items: stretch; }
+            .file-actions { justify-content: flex-end; }
+            .media-grid { grid-template-columns: repeat(2, 1fr); }
+            .audio-player { min-width: 90%; bottom: 12px; padding: 10px 14px; }
+            .audio-player-content { flex-wrap: wrap; gap: 8px; }
+            .audio-info { min-width: 100%; text-align: center; }
+            .audio-controls { width: 100%; }
+            .modal-content { padding: 20px; }
+        }
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .upload-area { padding: 30px 16px; }
+            .media-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <div>
+                    <h1>ConexZ</h1>
+                    <span class="subtitle">Transferência Inteligente</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="device-badge" id="deviceId"><i class="fas fa-qrcode"></i> ID: ...</span>
+                <button class="btn btn-secondary" id="ipBtn"><i class="fas fa-wifi"></i> IP</button>
+                <button class="btn btn-primary" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</button>
+            </div>
+        </header>
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'conexz-secret'
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+        <!-- STATUS PANEL -->
+        <div class="status-panel" id="statusPanel">
+            <div class="status-header">
+                <div class="status-title">
+                    <i class="fas fa-satellite-dish"></i>
+                    <span>Status da Conexão</span>
+                    <span class="status-badge" id="statusBadge">🟢 Online</span>
+                </div>
+                <div class="status-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="atualizarStatus()">
+                        <i class="fas fa-sync"></i> Atualizar
+                    </button>
+                </div>
+            </div>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-label"><i class="fas fa-wifi"></i> IP</div>
+                    <div class="status-value" id="statusIP">--</div>
+                    <div class="status-sub">Porta: <span id="statusPort">--</span></div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label"><i class="fas fa-clock"></i> Última Atualização</div>
+                    <div class="status-value" id="statusTime">--</div>
+                    <div class="status-sub" id="statusDate">--</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label"><i class="fas fa-file"></i> Arquivos</div>
+                    <div class="status-value" id="statusFiles">0</div>
+                    <div class="status-sub">
+                        <span id="statusVideos">0 🎬</span>
+                        <span id="statusMusicas">0 🎵</span>
+                        <span id="statusImagens">0 🖼️</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label"><i class="fas fa-qrcode"></i> Acesso</div>
+                    <div class="status-value" id="statusUrl">--</div>
+                    <button class="btn btn-sm btn-primary" onclick="copiarUrlStatus()" style="margin-top:8px;width:100%;">
+                        <i class="fas fa-copy"></i> Copiar IP
+                    </button>
+                </div>
+            </div>
+        </div>
 
-# ==========================================
-# CONFIGURAÇÕES
-# ==========================================
+        <!-- TABS -->
+        <div class="tabs">
+            <div class="tab active" data-tab="upload">📤 Upload</div>
+            <div class="tab" data-tab="files">📁 Arquivos <span class="badge" id="fileCount">0</span></div>
+            <div class="tab" data-tab="videos">🎬 Vídeos</div>
+            <div class="tab" data-tab="music">🎵 Músicas</div>
+            <div class="tab" data-tab="images">🖼️ Imagens</div>
+            <div class="tab" data-tab="connection">🔗 Conexão</div>
+            <div class="tab" data-tab="settings">⚙️ Config</div>
+        </div>
 
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB
+        <!-- TAB UPLOAD -->
+        <div class="tab-content active" id="tab-upload">
+            <h2><i class="fas fa-cloud-upload-alt"></i> Enviar Arquivo</h2>
+            <div class="upload-area" id="dropZone">
+                <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <h3>Arraste seus arquivos aqui</h3>
+                <p>ou clique para selecionar</p>
+                <input type="file" id="fileInput" multiple>
+                <div class="upload-info">📦 Suporta: MP4, MP3, JPG, PNG, PDF e mais</div>
+                <div class="progress-container" id="progressContainer" style="display:none">
+                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                    <span id="progressText">0%</span>
+                </div>
+            </div>
+            <div id="status" class="status"></div>
+        </div>
 
-# Banco de dados em memória
-db = {'files': {}, 'shared_links': {}}
-device_id = secrets.token_hex(8)
+        <!-- TAB ARQUIVOS -->
+        <div class="tab-content" id="tab-files">
+            <h2><i class="fas fa-folder"></i> Meus Arquivos</h2>
+            <div class="file-toolbar">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Buscar arquivo...">
+                </div>
+                <button class="btn btn-secondary" id="refreshBtn"><i class="fas fa-sync"></i></button>
+            </div>
+            <div id="fileList"></div>
+        </div>
 
-def get_local_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except:
-        return "127.0.0.1"
+        <!-- TAB VÍDEOS -->
+        <div class="tab-content" id="tab-videos">
+            <h2><i class="fas fa-play-circle"></i> Meus Vídeos</h2>
+            <div id="videoGrid" class="media-grid"></div>
+        </div>
 
-def format_size(bytes):
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if bytes < 1024:
-            return f"{bytes:.1f} {unit}"
-        bytes /= 1024
-    return f"{bytes:.1f} TB"
+        <!-- TAB MÚSICAS -->
+        <div class="tab-content" id="tab-music">
+            <h2><i class="fas fa-music"></i> Minhas Músicas</h2>
+            <div id="musicGrid" class="media-grid"></div>
+        </div>
 
-# ==========================================
-# ROTAS DO PWA
-# ==========================================
+        <!-- TAB IMAGENS -->
+        <div class="tab-content" id="tab-images">
+            <h2><i class="fas fa-images"></i> Minhas Imagens</h2>
+            <div id="imageGrid" class="media-grid"></div>
+        </div>
 
-@app.route('/manifest.json')
-def serve_manifest():
-    return send_from_directory('static', 'manifest.json')
+        <!-- TAB CONEXÃO -->
+        <div class="tab-content" id="tab-connection">
+            <h2><i class="fas fa-qrcode"></i> Conectar pelo QR Code</h2>
+            
+            <div style="display:grid; gap:20px; grid-template-columns: 1fr 1fr; max-width:800px; margin:0 auto;">
+                <!-- QR CODE -->
+                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border); text-align:center;">
+                    <h3 style="margin-bottom:12px; color:var(--accent);">📷 QR Code</h3>
+                    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Escaneie com a câmera do celular</p>
+                    
+                    <div id="qrCodeDisplay">
+                        <div style="font-size:14px; color:var(--text-secondary);" id="qrStatus">Clique em "Gerar QR Code"</div>
+                        <img id="qrCodeImage" src="" alt="QR Code" style="max-width:200px; border-radius:12px; border:2px solid var(--accent); display:none;">
+                    </div>
+                    
+                    <div style="display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="gerarQRCodeConexao()" id="gerarQRBtn">
+                            <i class="fas fa-qrcode"></i> Gerar QR Code
+                        </button>
+                    </div>
+                    
+                    <div id="linkDisplayConexao" style="margin-top:12px; padding:8px 12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border); display:none; word-break:break-all;">
+                        <span style="font-size:12px; color:var(--text-secondary);">📱 Link:</span>
+                        <span id="connectionLinkText" style="font-size:13px; color:var(--accent); font-family:monospace;"></span>
+                    </div>
+                </div>
+                
+                <!-- COMO CONECTAR -->
+                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
+                    <h3 style="margin-bottom:12px; color:var(--accent);">📱 Como Conectar</h3>
+                    
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        <div style="background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border);">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="background:var(--accent); color:#0a0a1a; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">1</span>
+                                <span style="font-size:14px;">Clique em <strong>"Gerar QR Code"</strong></span>
+                            </div>
+                        </div>
+                        
+                        <div style="background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border);">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="background:var(--accent); color:#0a0a1a; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">2</span>
+                                <span style="font-size:14px;">No celular, abra a câmera e escaneie o QR Code</span>
+                            </div>
+                        </div>
+                        
+                        <div style="background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border);">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span style="background:var(--accent); color:#0a0a1a; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">3</span>
+                                <span style="font-size:14px;">O app vai abrir automaticamente!</span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top:8px; padding:12px; background:var(--bg-card); border-radius:12px; border:1px solid var(--border); text-align:center;">
+                            <span style="font-size:12px; color:var(--text-muted);">Ou digite manualmente:</span>
+                            <div style="font-size:14px; color:var(--accent); font-family:monospace; margin-top:4px;" id="manualIp">https://conexz-app.onrender.com</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DISPOSITIVOS CONECTADOS -->
+            <div style="margin-top:20px; background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
+                <h3 style="margin-bottom:12px; color:var(--accent);">📡 Dispositivos Conectados</h3>
+                <div id="connectedDevicesList">
+                    <p style="color:var(--text-secondary); font-size:14px;">Nenhum dispositivo conectado</p>
+                </div>
+            </div>
+        </div>
 
-@app.route('/sw.js')
-def serve_sw():
-    return send_from_directory('.', 'sw.js')
+        <!-- TAB CONFIG -->
+        <div class="tab-content" id="tab-settings">
+            <h2><i class="fas fa-cog"></i> Configurações</h2>
+            <div class="setting-card">
+                <div class="info"><h3><i class="fas fa-moon"></i> Modo Escuro</h3><p>Ative o modo escuro</p></div>
+                <div class="toggle"><input type="checkbox" id="darkMode"><label for="darkMode"></label></div>
+            </div>
+            <div class="setting-card">
+                <div class="info"><h3><i class="fas fa-palette"></i> Tema de Cores</h3><p>Escolha a cor principal</p></div>
+                <div class="theme-selector">
+                    <button class="theme-btn active" data-color="#00d4ff" style="background:#00d4ff" onclick="mudarTema('#00d4ff', this)"></button>
+                    <button class="theme-btn" data-color="#6C63FF" style="background:#6C63FF" onclick="mudarTema('#6C63FF', this)"></button>
+                    <button class="theme-btn" data-color="#FF6B6B" style="background:#FF6B6B" onclick="mudarTema('#FF6B6B', this)"></button>
+                    <button class="theme-btn" data-color="#FFD93D" style="background:#FFD93D" onclick="mudarTema('#FFD93D', this)"></button>
+                    <button class="theme-btn" data-color="#6BCB77" style="background:#6BCB77" onclick="mudarTema('#6BCB77', this)"></button>
+                </div>
+            </div>
+            <div class="setting-card">
+                <div class="info"><h3><i class="fas fa-hdd"></i> Armazenamento</h3><p>Arquivos salvos localmente</p></div>
+                <span style="color:#48bb78;font-size:12px;">✅ Seguro</span>
+            </div>
+        </div>
+    </div>
 
-# ==========================================
-# ROTAS DA API
-# ==========================================
+    <!-- PLAYER VÍDEO -->
+    <div class="video-modal" id="videoModal">
+        <div class="video-modal-content">
+            <button class="video-close" onclick="fecharVideo()">✕</button>
+            <video id="videoPlayer" controls></video>
+            <div class="video-actions">
+                <button class="btn btn-primary" onclick="baixarVideo()"><i class="fas fa-download"></i> Baixar</button>
+                <button class="btn btn-secondary" onclick="compartilharVideo()"><i class="fas fa-share-alt"></i> Compartilhar</button>
+            </div>
+        </div>
+    </div>
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+    <!-- PLAYER ÁUDIO -->
+    <div class="audio-player" id="audioPlayer">
+        <div class="audio-player-content">
+            <div class="audio-info">
+                <div class="audio-title" id="audioTitle">🎵 Música</div>
+            </div>
+            <div class="audio-controls">
+                <button class="audio-btn" id="audioBtn" onclick="toggleAudio()"><i class="fas fa-play"></i></button>
+                <input type="range" id="audioProgress" min="0" max="100" value="0" class="audio-progress">
+                <div class="audio-time">
+                    <span id="audioCurrentTime">0:00</span>
+                    <span id="audioDuration">0:00</span>
+                </div>
+                <button class="audio-btn audio-close" onclick="fecharAudio()"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+    </div>
 
-@app.route('/api/device')
-def device():
-    return jsonify({
-        'id': device_id,
-        'ip': get_local_ip(),
-        'port': 5001
-    })
+    <!-- QR CODE MODAL -->
+    <div class="modal" id="qrModal">
+        <div class="modal-content">
+            <button class="close" onclick="fecharQR()">✕</button>
+            <h2><i class="fas fa-qrcode"></i> Conectar Celular</h2>
+            <div class="qr-container" id="qrContainer"><p style="color:var(--text-secondary);">⏳ Gerando...</p></div>
+            <p class="qr-url" id="qrUrl">http://...</p>
+            <button class="btn btn-secondary" onclick="copiarLink()"><i class="fas fa-copy"></i> Copiar Link</button>
+        </div>
+    </div>
 
-@app.route('/api/qr')
-def generate_qr():
-    """Gera QR Code com a URL correta do Render"""
-    # Usa a URL pública do Render
-    url = "https://conexz-app.onrender.com"
-    
-    # Gera QR Code com a URL
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(url)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffered = io.BytesIO()
-    img.save(buffered, format="PNG")
-    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
-    
-    return jsonify({
-        'qr': qr_base64,
-        'url': url
-    })
+    <!-- SERVICE WORKER REGISTRO -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('✅ Service Worker registrado!'))
+                .catch(err => console.log('❌ Service Worker erro:', err));
+        }
+    </script>
 
-@app.route('/api/upload', methods=['POST'])
-def upload():
-    if 'file' not in request.files:
-        return jsonify({'error': 'Nenhum arquivo'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'Nome vazio'}), 400
-    
-    file_id = hashlib.md5(file.filename.encode() + str(time.time()).encode()).hexdigest()
-    file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{file.filename}")
-    file.save(file_path)
-    size = os.path.getsize(file_path)
-    
-    db['files'][file_id] = {
-        'id': file_id,
-        'name': file.filename,
-        'path': file_path,
-        'size': size,
-        'size_formatted': format_size(size),
-        'date': time.time(),
-        'date_formatted': datetime.now().strftime('%d/%m/%Y %H:%M')
-    }
-    
-    socketio.emit('new_file', {
-        'id': file_id,
-        'name': file.filename,
-        'size': format_size(size)
-    })
-    
-    return jsonify({
-        'id': file_id,
-        'name': file.filename,
-        'size': size,
-        'size_formatted': format_size(size),
-        'message': '✅ Arquivo enviado com sucesso!'
-    })
+    <!-- SCRIPTS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        let videoAtual = null;
+        let audioAtual = null;
+        let audioTocando = false;
+        let statusInterval = null;
+        let currentQRCode = null;
 
-@app.route('/api/files')
-def list_files():
-    files = []
-    for file_id, info in db['files'].items():
-        files.append({
-            'id': file_id,
-            'name': info['name'],
-            'size': info['size'],
-            'size_formatted': info['size_formatted'],
-            'date': info['date_formatted']
-        })
-    files.sort(key=lambda x: x['date'], reverse=True)
-    return jsonify(files)
+        async function init() {
+            try {
+                const res = await fetch('/api/device');
+                const data = await res.json();
+                document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0,8);
+                await carregarArquivos();
+                await carregarStatus();
+                configurarEventos();
+                iniciarStatusAutomatico();
+                console.log('✅ ConexZ inicializado!');
+            } catch(e) {
+                console.error('❌ Erro:', e);
+                mostrarStatus('Erro ao inicializar', 'error');
+            }
+        }
 
-@app.route('/api/view/<file_id>')
-def view_file(file_id):
-    if file_id not in db['files']:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    file_info = db['files'][file_id]
-    if not os.path.exists(file_info['path']):
-        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
-    
-    filename = file_info['name']
-    ext = filename.split('.')[-1].lower() if '.' in filename else ''
-    
-    mimetypes = {
-        'mp4': 'video/mp4',
-        'webm': 'video/webm',
-        'mp3': 'audio/mpeg',
-        'wav': 'audio/wav',
-        'ogg': 'audio/ogg',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'gif': 'image/gif',
-        'pdf': 'application/pdf',
-        'txt': 'text/plain',
-        'json': 'application/json',
-        'zip': 'application/zip'
-    }
-    mimetype = mimetypes.get(ext, 'application/octet-stream')
-    
-    return send_file(file_info['path'], mimetype=mimetype)
+        async function carregarStatus() {
+            try {
+                const res = await fetch('/api/status-completo');
+                const data = await res.json();
+                
+                document.getElementById('statusIP').textContent = data.ip;
+                document.getElementById('statusPort').textContent = data.port;
+                document.getElementById('statusTime').textContent = data.hora;
+                document.getElementById('statusDate').textContent = data.data;
+                document.getElementById('statusFiles').textContent = data.arquivos;
+                document.getElementById('statusVideos').textContent = data.videos + ' 🎬';
+                document.getElementById('statusMusicas').textContent = data.musicas + ' 🎵';
+                document.getElementById('statusImagens').textContent = data.imagens + ' 🖼️';
+                
+                const url = `http://${data.ip}:${data.port}`;
+                document.getElementById('statusUrl').textContent = url;
+                document.getElementById('manualIp').textContent = 'https://conexz-app.onrender.com';
+                
+                const badge = document.getElementById('statusBadge');
+                if (data.status === 'online') {
+                    badge.textContent = '🟢 Online';
+                    badge.className = 'status-badge';
+                } else {
+                    badge.textContent = '🔴 Offline';
+                    badge.className = 'status-badge offline';
+                }
+            } catch(e) {
+                console.error('❌ Erro ao carregar status:', e);
+            }
+        }
 
-@app.route('/api/download/<file_id>')
-def download_file(file_id):
-    if file_id not in db['files']:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    file_info = db['files'][file_id]
-    if not os.path.exists(file_info['path']):
-        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
-    
-    return send_file(
-        file_info['path'],
-        as_attachment=True,
-        download_name=file_info['name']
-    )
+        function atualizarStatus() {
+            carregarStatus();
+            mostrarStatus('🔄 Status atualizado!', 'info');
+        }
 
-@app.route('/api/share/<file_id>')
-def share_file(file_id):
-    if file_id not in db['files']:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    token = secrets.token_urlsafe(12)
-    share_url = f"{request.host_url}api/s/{token}"
-    
-    db['shared_links'][token] = {
-        'file_id': file_id,
-        'expires': time.time() + 86400
-    }
-    
-    return jsonify({
-        'link': share_url,
-        'expires': time.time() + 86400
-    })
+        function copiarUrlStatus() {
+            const url = document.getElementById('statusUrl').textContent;
+            if (url && url !== '--') {
+                navigator.clipboard.writeText(url).then(() => {
+                    mostrarStatus('✅ URL copiada!', 'success');
+                }).catch(() => {
+                    prompt('Copie a URL:', url);
+                });
+            }
+        }
 
-@app.route('/api/s/<token>')
-def shared_access(token):
-    if token not in db['shared_links']:
-        return jsonify({'error': 'Link inválido'}), 404
-    
-    link = db['shared_links'][token]
-    if time.time() > link['expires']:
-        del db['shared_links'][token]
-        return jsonify({'error': 'Link expirado'}), 410
-    
-    return download_file(link['file_id'])
+        function iniciarStatusAutomatico() {
+            if (statusInterval) clearInterval(statusInterval);
+            statusInterval = setInterval(carregarStatus, 30000);
+        }
 
-@app.route('/api/delete/<file_id>', methods=['DELETE'])
-def delete_file(file_id):
-    if file_id not in db['files']:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    file_info = db['files'][file_id]
-    if os.path.exists(file_info['path']):
-        os.remove(file_info['path'])
-    
-    del db['files'][file_id]
-    
-    socketio.emit('file_deleted', {'id': file_id})
-    return jsonify({'message': '🗑️ Arquivo deletado'})
+        async function detectarIP() {
+            try {
+                const res = await fetch('/api/device');
+                const data = await res.json();
+                mostrarStatus(`📡 IP: ${data.ip}:${data.port}`, 'info');
+            } catch(e) {
+                mostrarStatus('❌ Erro ao detectar IP', 'error');
+            }
+        }
 
-@app.route('/api/status')
-def status():
-    return jsonify({
-        'status': 'online',
-        'device': device_id,
-        'ip': get_local_ip(),
-        'port': 5001,
-        'files': len(db['files'])
-    })
+        // =============================================
+        // QR CODE CONEXÃO - CORRIGIDO
+        // =============================================
 
-@app.route('/api/status-completo')
-def status_completo():
-    now = datetime.now()
-    
-    videos = 0
-    musicas = 0
-    imagens = 0
-    documentos = 0
-    
-    for file_id, info in db['files'].items():
-        name = info['name'].lower()
-        if name.endswith(('.mp4', '.webm', '.mov', '.mkv', '.avi')):
-            videos += 1
-        elif name.endswith(('.mp3', '.wav', '.ogg', '.flac', '.m4a')):
-            musicas += 1
-        elif name.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')):
-            imagens += 1
-        elif name.endswith(('.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt')):
-            documentos += 1
-    
-    return jsonify({
-        'ip': get_local_ip(),
-        'port': 5001,
-        'data': now.strftime('%d/%m/%Y'),
-        'hora': now.strftime('%H:%M:%S'),
-        'dispositivo': device_id[:8],
-        'arquivos': len(db['files']),
-        'videos': videos,
-        'musicas': musicas,
-        'imagens': imagens,
-        'documentos': documentos,
-        'status': 'online'
-    })
+        async function gerarQRCodeConexao() {
+            try {
+                const res = await fetch('/api/qr');
+                const data = await res.json();
+                
+                const img = document.getElementById('qrCodeImage');
+                const status = document.getElementById('qrStatus');
+                const linkDisplay = document.getElementById('linkDisplayConexao');
+                const linkText = document.getElementById('connectionLinkText');
+                
+                if (data.qr) {
+                    img.src = `data:image/png;base64,${data.qr}`;
+                    img.style.display = 'block';
+                    status.textContent = '📷 Escaneie com a câmera do celular';
+                    status.style.color = 'var(--accent)';
+                    
+                    linkText.textContent = data.url;
+                    linkDisplay.style.display = 'block';
+                    
+                    document.getElementById('manualIp').textContent = data.url;
+                    
+                    currentQRCode = data.url;
+                    document.getElementById('gerarQRBtn').innerHTML = '<i class="fas fa-sync"></i> Atualizar QR Code';
+                    
+                    mostrarStatus('✅ QR Code gerado! Escaneie com o celular', 'success');
+                }
+            } catch(e) {
+                console.error('Erro:', e);
+                mostrarStatus('❌ Erro ao gerar QR Code', 'error');
+            }
+        }
 
-# ==========================================
-# SOCKET.IO EVENTOS
-# ==========================================
+        // =============================================
+        // CONFIGURAR EVENTOS
+        // =============================================
 
-@socketio.on('connect')
-def handle_connect():
-    device_id = request.args.get('device_id')
-    if device_id:
-        emit('device_connected', {'device_id': device_id}, broadcast=True)
+        function configurarEventos() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    const tabName = this.dataset.tab;
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    const target = document.getElementById('tab-' + tabName);
+                    if(target) target.classList.add('active');
+                    if(['videos', 'music', 'images', 'files'].includes(tabName)) {
+                        carregarArquivos();
+                    }
+                });
+            });
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    device_id = request.args.get('device_id')
-    if device_id:
-        emit('device_disconnected', {'device_id': device_id}, broadcast=True)
+            document.getElementById('qrBtn').addEventListener('click', gerarQR);
+            document.getElementById('ipBtn').addEventListener('click', detectarIP);
+            document.getElementById('refreshBtn').addEventListener('click', carregarArquivos);
 
-# ==========================================
-# INICIAR SERVIDOR
-# ==========================================
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if(e.dataTransfer.files.length) {
+                    enviarArquivos(e.dataTransfer.files);
+                }
+            });
+            fileInput.addEventListener('change', () => {
+                if(fileInput.files.length) {
+                    enviarArquivos(fileInput.files);
+                    fileInput.value = '';
+                }
+            });
 
-if __name__ == '__main__':
-    port = 5001
-    ip = get_local_ip()
-    
-    print(f"""
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║   📱 CONEXZ - TRANSFERÊNCIA INTELIGENTE                     ║
-    ╠═══════════════════════════════════════════════════════════════╣
-    ║  🌐  LOCAL:    http://localhost:{port}                           ║
-    ║  📱  CELULAR:  http://{ip}:{port}                ║
-    ║  📱  DISPOSITIVO: {device_id[:8]}                                     ║
-    ║  💾  ARQUIVOS: SALVOS LOCALMENTE                           ║
-    ║  📂  PASTA:    uploads/                                     ║
-    ║  🔗  CONEXÃO:  QR CODE                                     ║
-    ╚═══════════════════════════════════════════════════════════════╝
-    """)
-    
-    print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
-    print("📷 ESCANEIE O QR CODE PARA CONECTAR")
-    print("📂 Arquivos salvos na pasta 'uploads/'\n")
-    
-    socketio.run(
-        app,
-        host='0.0.0.0',
-        port=port,
-        debug=True,
-        allow_unsafe_werkzeug=True
-    )
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const query = this.value.toLowerCase();
+                document.querySelectorAll('.file-item').forEach(item => {
+                    const name = item.dataset.name || '';
+                    item.style.display = name.includes(query) ? 'flex' : 'none';
+                });
+            });
+
+            document.getElementById('darkMode').addEventListener('change', function() {
+                if(this.checked) {
+                    document.documentElement.style.setProperty('--bg-primary', '#f0f4f8');
+                    document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
+                    document.documentElement.style.setProperty('--bg-card', '#e8edf3');
+                    document.documentElement.style.setProperty('--bg-hover', '#dce3ea');
+                    document.documentElement.style.setProperty('--text-primary', '#1a202c');
+                    document.documentElement.style.setProperty('--text-secondary', '#4a5568');
+                    document.documentElement.style.setProperty('--text-muted', '#718096');
+                    document.documentElement.style.setProperty('--border', '#cbd5e0');
+                } else {
+                    document.documentElement.style.setProperty('--bg-primary', '#0a0a1a');
+                    document.documentElement.style.setProperty('--bg-secondary', '#12122a');
+                    document.documentElement.style.setProperty('--bg-card', '#1a1a3e');
+                    document.documentElement.style.setProperty('--bg-hover', '#252550');
+                    document.documentElement.style.setProperty('--text-primary', '#ffffff');
+                    document.documentElement.style.setProperty('--text-secondary', '#a0aec0');
+                    document.documentElement.style.setProperty('--text-muted', '#6a7a8e');
+                    document.documentElement.style.setProperty('--border', '#2a2a5a');
+                }
+            });
+
+            socket.on('new_file', () => {
+                carregarArquivos();
+                carregarStatus();
+                mostrarStatus('📄 Novo arquivo recebido!', 'success');
+            });
+            socket.on('file_deleted', () => {
+                carregarArquivos();
+                carregarStatus();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if(e.key === 'Escape') {
+                    fecharVideo();
+                    fecharQR();
+                    fecharAudio();
+                }
+            });
+
+            document.getElementById('videoModal').addEventListener('click', function(e) {
+                if(e.target === this) fecharVideo();
+            });
+            document.getElementById('qrModal').addEventListener('click', function(e) {
+                if(e.target === this) fecharQR();
+            });
+        }
+
+        // =============================================
+        // UPLOAD
+        // =============================================
+
+        async function enviarArquivos(files) {
+            const form = new FormData();
+            for(let f of files) form.append('file', f);
+            
+            const progress = document.getElementById('progressContainer');
+            const fill = document.getElementById('progressFill');
+            const text = document.getElementById('progressText');
+            progress.style.display = 'flex';
+            fill.style.width = '0%';
+            text.textContent = '0%';
+            
+            mostrarStatus('⏳ Enviando...', 'info');
+            
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/upload');
+                
+                xhr.upload.onprogress = (e) => {
+                    if(e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        fill.style.width = pct + '%';
+                        text.textContent = pct + '%';
+                    }
+                };
+                
+                xhr.onload = () => {
+                    progress.style.display = 'none';
+                    if(xhr.status === 200) {
+                        mostrarStatus('✅ Arquivo enviado com sucesso!', 'success');
+                        carregarArquivos();
+                        carregarStatus();
+                    } else {
+                        mostrarStatus('❌ Erro ao enviar', 'error');
+                    }
+                };
+                
+                xhr.onerror = () => {
+                    progress.style.display = 'none';
+                    mostrarStatus('❌ Erro de conexão', 'error');
+                };
+                
+                xhr.send(form);
+            } catch(e) {
+                progress.style.display = 'none';
+                mostrarStatus('❌ Erro ao enviar', 'error');
+            }
+        }
+
+        // =============================================
+        // ARQUIVOS
+        // =============================================
+
+        async function carregarArquivos() {
+            try {
+                const res = await fetch('/api/files');
+                const files = await res.json();
+                renderizarArquivos(files);
+                renderizarMidia(files);
+                document.getElementById('fileCount').textContent = files.length;
+            } catch(e) {
+                console.error('❌ Erro:', e);
+                mostrarStatus('Erro ao carregar arquivos', 'error');
+            }
+        }
+
+        function renderizarArquivos(files) {
+            const list = document.getElementById('fileList');
+            if(!files.length) {
+                list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhum arquivo encontrado</p><p style="font-size:14px;">Envie seu primeiro arquivo!</p></div>`;
+                return;
+            }
+            
+            list.innerHTML = files.map(f => `
+                <div class="file-item" data-name="${f.name.toLowerCase()}">
+                    <div class="file-info">
+                        <i class="${getIcon(f.name)}"></i>
+                        <div class="file-details">
+                            <div class="file-name">${f.name}</div>
+                            <div class="file-meta">${f.size_formatted} • ${f.date}</div>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="visualizarArquivo('${f.id}')" title="Visualizar"><i class="fas fa-eye"></i></button>
+                        <button class="btn btn-sm btn-secondary" onclick="baixarArquivo('${f.id}')" title="Baixar"><i class="fas fa-download"></i></button>
+                        <button class="btn btn-sm btn-secondary" onclick="compartilharArquivo('${f.id}')" title="Compartilhar"><i class="fas fa-share-alt"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deletarArquivo('${f.id}')" title="Deletar"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderizarMidia(files) {
+            const videos = files.filter(f => f.name.match(/\.(mp4|webm|mov|mkv|avi)$/i));
+            const audios = files.filter(f => f.name.match(/\.(mp3|wav|ogg|flac|m4a)$/i));
+            const imagens = files.filter(f => f.name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i));
+            
+            document.getElementById('videoGrid').innerHTML = videos.length ? 
+                videos.map(v => `
+                    <div class="media-card" onclick="playVideo('${v.id}')">
+                        <video><source src="/api/view/${v.id}"></video>
+                        <div class="media-info">
+                            <div class="media-title">${v.name}</div>
+                            <div class="media-meta">${v.size_formatted}</div>
+                        </div>
+                    </div>
+                `).join('') :
+                `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-play-circle"></i><p>Nenhum vídeo encontrado</p></div>`;
+            
+            document.getElementById('musicGrid').innerHTML = audios.length ?
+                audios.map(a => `
+                    <div class="media-card" onclick="playAudio('${a.id}')">
+                        <div class="media-preview"><i class="fas fa-music"></i></div>
+                        <div class="media-info">
+                            <div class="media-title">${a.name}</div>
+                            <div class="media-meta">${a.size_formatted}</div>
+                        </div>
+                    </div>
+                `).join('') :
+                `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-music"></i><p>Nenhuma música encontrada</p></div>`;
+            
+            document.getElementById('imageGrid').innerHTML = imagens.length ?
+                imagens.map(i => `
+                    <div class="media-card" onclick="visualizarArquivo('${i.id}')">
+                        <div class="media-preview"><i class="fas fa-image" style="font-size:40px;"></i></div>
+                        <div class="media-info">
+                            <div class="media-title">${i.name}</div>
+                            <div class="media-meta">${i.size_formatted}</div>
+                        </div>
+                    </div>
+                `).join('') :
+                `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-images"></i><p>Nenhuma imagem encontrada</p></div>`;
+        }
+
+        // =============================================
+        // VÍDEO
+        // =============================================
+
+        function playVideo(id) {
+            videoAtual = id;
+            const modal = document.getElementById('videoModal');
+            const player = document.getElementById('videoPlayer');
+            player.src = '/api/view/' + id;
+            modal.classList.add('active');
+            player.play();
+        }
+
+        function fecharVideo() {
+            const player = document.getElementById('videoPlayer');
+            player.pause();
+            player.src = '';
+            document.getElementById('videoModal').classList.remove('active');
+        }
+
+        function baixarVideo() { if(videoAtual) baixarArquivo(videoAtual); }
+        function compartilharVideo() { if(videoAtual) compartilharArquivo(videoAtual); }
+
+        // =============================================
+        // ÁUDIO
+        // =============================================
+
+        function playAudio(id) {
+            if(audioAtual) { audioAtual.pause(); audioAtual = null; }
+            
+            audioAtual = new Audio('/api/view/' + id);
+            
+            fetch('/api/files').then(r => r.json()).then(files => {
+                const f = files.find(x => x.id === id);
+                if(f) document.getElementById('audioTitle').textContent = '🎵 ' + f.name;
+            });
+            
+            audioAtual.ontimeupdate = () => {
+                if(audioAtual.duration) {
+                    const pct = (audioAtual.currentTime / audioAtual.duration) * 100;
+                    document.getElementById('audioProgress').value = pct;
+                    document.getElementById('audioCurrentTime').textContent = formatTempo(audioAtual.currentTime);
+                }
+            };
+            
+            audioAtual.onloadedmetadata = () => {
+                document.getElementById('audioDuration').textContent = formatTempo(audioAtual.duration);
+            };
+            
+            audioAtual.onended = fecharAudio;
+            audioAtual.onerror = () => mostrarStatus('❌ Erro ao tocar música', 'error');
+            
+            document.getElementById('audioPlayer').style.display = 'block';
+            audioAtual.play();
+            audioTocando = true;
+            document.getElementById('audioBtn').innerHTML = '<i class="fas fa-pause"></i>';
+        }
+
+        function toggleAudio() {
+            if(!audioAtual) return;
+            if(audioTocando) {
+                audioAtual.pause();
+                document.getElementById('audioBtn').innerHTML = '<i class="fas fa-play"></i>';
+            } else {
+                audioAtual.play();
+                document.getElementById('audioBtn').innerHTML = '<i class="fas fa-pause"></i>';
+            }
+            audioTocando = !audioTocando;
+        }
+
+        function fecharAudio() {
+            if(audioAtual) { audioAtual.pause(); audioAtual.src = ''; audioAtual = null; }
+            document.getElementById('audioPlayer').style.display = 'none';
+            audioTocando = false;
+            document.getElementById('audioBtn').innerHTML = '<i class="fas fa-play"></i>';
+        }
+
+        // =============================================
+        // QR CODE MODAL
+        // =============================================
+
+        async function gerarQR() {
+            const modal = document.getElementById('qrModal');
+            const container = document.getElementById('qrContainer');
+            const urlEl = document.getElementById('qrUrl');
+            modal.classList.add('active');
+            container.innerHTML = '<p style="color:var(--text-secondary);">⏳ Gerando...</p>';
+            
+            try {
+                const res = await fetch('/api/qr');
+                const data = await res.json();
+                container.innerHTML = `<img src="data:image/png;base64,${data.qr}">`;
+                urlEl.textContent = data.url || 'https://conexz-app.onrender.com';
+            } catch(e) {
+                container.innerHTML = '<p style="color:#e53e3e;">❌ Erro ao gerar QR Code</p>';
+                urlEl.textContent = 'https://conexz-app.onrender.com';
+            }
+        }
+
+        function fecharQR() {
+            document.getElementById('qrModal').classList.remove('active');
+        }
+
+        async function copiarLink() {
+            const url = document.getElementById('qrUrl').textContent;
+            await navigator.clipboard.writeText(url);
+            mostrarStatus('✅ Link copiado!', 'success');
+        }
+
+        // =============================================
+        // FUNÇÕES COMPARTILHADAS
+        // =============================================
+
+        function visualizarArquivo(id) {
+            window.open('/api/view/' + id, '_blank');
+        }
+        
+        function baixarArquivo(id) {
+            window.location.href = '/api/download/' + id;
+            mostrarStatus('⬇️ Download iniciado', 'success');
+        }
+
+        async function compartilharArquivo(id) {
+            try {
+                const res = await fetch('/api/share/' + id);
+                const data = await res.json();
+                await navigator.clipboard.writeText(data.link);
+                mostrarStatus('✅ Link copiado!', 'success');
+                alert('Link compartilhável:\n' + data.link + '\n\nVálido por 24 horas');
+            } catch(e) {
+                mostrarStatus('❌ Erro ao compartilhar', 'error');
+            }
+        }
+
+        async function deletarArquivo(id) {
+            if(!confirm('Tem certeza que deseja deletar este arquivo?')) return;
+            try {
+                await fetch('/api/delete/' + id, { method: 'DELETE' });
+                mostrarStatus('🗑️ Arquivo deletado', 'success');
+                carregarArquivos();
+                carregarStatus();
+            } catch(e) {
+                mostrarStatus('❌ Erro ao deletar', 'error');
+            }
+        }
+
+        // =============================================
+        // TEMAS
+        // =============================================
+
+        function mudarTema(cor, btn) {
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.documentElement.style.setProperty('--accent', cor);
+            document.querySelectorAll('.btn-primary').forEach(b => {
+                b.style.background = cor;
+            });
+            document.querySelectorAll('.tab.active').forEach(t => {
+                t.style.background = cor;
+                t.style.borderColor = cor;
+            });
+            document.querySelectorAll('.badge').forEach(b => {
+                b.style.background = cor;
+            });
+            document.querySelectorAll('.logo-icon').forEach(l => {
+                l.style.background = cor;
+            });
+        }
+
+        // =============================================
+        // UTILITÁRIOS
+        // =============================================
+
+        function getIcon(name) {
+            if(name.match(/\.(mp4|webm|mov|mkv|avi)$/i)) return 'fas fa-play-circle';
+            if(name.match(/\.(mp3|wav|ogg|flac|m4a)$/i)) return 'fas fa-music';
+            if(name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) return 'fas fa-image';
+            if(name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$/i)) return 'fas fa-file-pdf';
+            if(name.match(/\.(zip|rar|7z|tar|gz)$/i)) return 'fas fa-file-archive';
+            return 'fas fa-file';
+        }
+
+        function formatTempo(segundos) {
+            if(!segundos || isNaN(segundos)) return '0:00';
+            const m = Math.floor(segundos / 60);
+            const s = Math.floor(segundos % 60);
+            return m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        function mostrarStatus(msg, tipo) {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            el.className = 'status ' + tipo;
+            el.style.display = 'block';
+            clearTimeout(el._timeout);
+            el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
+        }
+
+        // EXPORTAR FUNÇÕES
+        window.playVideo = playVideo;
+        window.fecharVideo = fecharVideo;
+        window.baixarVideo = baixarVideo;
+        window.compartilharVideo = compartilharVideo;
+        window.playAudio = playAudio;
+        window.toggleAudio = toggleAudio;
+        window.fecharAudio = fecharAudio;
+        window.visualizarArquivo = visualizarArquivo;
+        window.baixarArquivo = baixarArquivo;
+        window.compartilharArquivo = compartilharArquivo;
+        window.deletarArquivo = deletarArquivo;
+        window.gerarQR = gerarQR;
+        window.fecharQR = fecharQR;
+        window.copiarLink = copiarLink;
+        window.mudarTema = mudarTema;
+        window.detectarIP = detectarIP;
+        window.atualizarStatus = atualizarStatus;
+        window.copiarUrlStatus = copiarUrlStatus;
+        window.gerarQRCodeConexao = gerarQRCodeConexao;
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        window.addEventListener('beforeunload', function() {
+            if (statusInterval) clearInterval(statusInterval);
+        });
+    </script>
+</body>
+</html>
