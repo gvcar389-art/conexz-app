@@ -937,31 +937,6 @@ window.showLogin = showLogin;
 
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('✅ Service Worker registrado!'))
-        .catch(err => console.log('❌ Service Worker erro:', err));
+        .then(() => console.log('✅ Service Worker registrado com sucesso'))
+        .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
 }
-
-// ==========================================
-// INICIAR
-// ==========================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Verificar se o usuário já está logado
-    fetch('/api/auth/check')
-        .then(res => res.json())
-        .then(data => {
-            if (data.authenticated) {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                init();
-            }
-        })
-        .catch(() => {
-            // Se não estiver logado, mostra a tela de login
-            document.getElementById('loginScreen').style.display = 'flex';
-        });
-});
-
-window.addEventListener('beforeunload', function() {
-    if (statusInterval) clearInterval(statusInterval);
-});
