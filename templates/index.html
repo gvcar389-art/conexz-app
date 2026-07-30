@@ -18,8 +18,8 @@
     
     <style>
         /* ============================================
-           RESET E CONFIGURAÇÕES GERAIS
-           ============================================ */
+            RESET E CONFIGURAÇÕES GERAIS
+            ============================================ */
         
         * { margin:0; padding:0; box-sizing:border-box; }
         :root {
@@ -612,850 +612,117 @@
                     
                     <div id="qrCodeDisplay">
                         <div style="font-size:14px; color:var(--text-secondary);" id="qrStatus">Clique em "Gerar QR Code"</div>
-                        <img id="qrCodeImage" src="" alt="QR Code" style="max-width:200px; border-radius:12px; border:2px solid var(--accent); display:none;">
+                        <img id="qrCodeImage" src="" alt="QR Code" style="display:none; max-width:200px; border-radius:12px; border:2px solid var(--accent);">
                     </div>
-                    
-                    <div style="display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap;">
-                        <button class="btn btn-primary" onclick="gerarQRCodeConexao()" id="gerarQRBtn">
-                            <i class="fas fa-qrcode"></i> Gerar QR Code
-                        </button>
-                    </div>
-                    
-                    <div id="linkDisplayConexao" style="margin-top:12px; padding:8px 12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border); display:none; word-break:break-all;">
-                        <span style="font-size:12px; color:var(--text-secondary);">📱 Link:</span>
-                        <span id="connectionLinkText" style="font-size:13px; color:var(--accent); font-family:monospace;"></span>
-                    </div>
+                    <button class="btn btn-primary" onclick="gerarQrCode()" style="margin-top:16px; width:100%;">
+                        <i class="fas fa-qrcode"></i> Gerar QR Code
+                    </button>
                 </div>
-                
-                <!-- COMO CONECTAR -->
+
+                <!-- INFO DE REDE -->
                 <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
-                    <h3 style="margin-bottom:12px; color:var(--accent);">📱 Como Conectar</h3>
-                    
-                    <div style="display:flex; flex-direction:column; gap:16px;">
-                        <div style="background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border);">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <span style="background:var(--accent); color:#0a0a1a; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">1</span>
-                                <span style="font-size:14px;">Clique em <strong>"Gerar QR Code"</strong></span>
-                            </div>
-                        </div>
-                        
-                        <div style="background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border);">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <span style="background:var(--accent); color:#0a0a1a; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">2</span>
-                                <span style="font-size:14px;">No celular, abra a câmera e escaneie o QR Code</span>
-                            </div>
-                        </div>
-                        
-                        <div style="background:var(--bg-card); border-radius:12px; padding:16px; border:1px solid var(--border);">
-                            <div style="display:flex; align-items:center; gap:12px;">
-                                <span style="background:var(--accent); color:#0a0a1a; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700;">3</span>
-                                <span style="font-size:14px;">O app vai abrir automaticamente!</span>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top:8px; padding:12px; background:var(--bg-card); border-radius:12px; border:1px solid var(--border); text-align:center;">
-                            <span style="font-size:12px; color:var(--text-muted);">Ou digite manualmente:</span>
-                            <div style="font-size:14px; color:var(--accent); font-family:monospace; margin-top:4px;" id="manualIp">https://conexz-app.onrender.com</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- DISPOSITIVOS CONECTADOS -->
-            <div style="margin-top:20px; background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
-                <h3 style="margin-bottom:12px; color:var(--accent);">📡 Dispositivos Conectados</h3>
-                <div id="connectedDevicesList">
-                    <p style="color:var(--text-secondary); font-size:14px;">Nenhum dispositivo conectado</p>
+                    <h3 style="margin-bottom:12px; color:var(--accent);"><i class="fas fa-network-wired"></i> Endereço de Rede</h3>
+                    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Digite este endereço no navegador do outro dispositivo:</p>
+                    <div id="manualIp" style="background:var(--bg-card); padding:12px; border-radius:8px; border:1px solid var(--border); margin-bottom:16px;">http://--:--</div>
+                    <button class="btn btn-secondary" onclick="copiarUrlStatus()" style="width:100%;">
+                        <i class="fas fa-copy"></i> Copiar Link
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- TAB CONFIG -->
+        <!-- TAB CONFIGURAÇÕES -->
         <div class="tab-content" id="tab-settings">
             <h2><i class="fas fa-cog"></i> Configurações</h2>
             <div class="setting-card">
-                <div class="info"><h3><i class="fas fa-moon"></i> Modo Escuro</h3><p>Ative o modo escuro</p></div>
-                <div class="toggle"><input type="checkbox" id="darkMode"><label for="darkMode"></label></div>
-            </div>
-            <div class="setting-card">
-                <div class="info"><h3><i class="fas fa-palette"></i> Tema de Cores</h3><p>Escolha a cor principal</p></div>
-                <div class="theme-selector">
-                    <button class="theme-btn active" data-color="#00d4ff" style="background:#00d4ff" onclick="mudarTema('#00d4ff', this)"></button>
-                    <button class="theme-btn" data-color="#6C63FF" style="background:#6C63FF" onclick="mudarTema('#6C63FF', this)"></button>
-                    <button class="theme-btn" data-color="#FF6B6B" style="background:#FF6B6B" onclick="mudarTema('#FF6B6B', this)"></button>
-                    <button class="theme-btn" data-color="#FFD93D" style="background:#FFD93D" onclick="mudarTema('#FFD93D', this)"></button>
-                    <button class="theme-btn" data-color="#6BCB77" style="background:#6BCB77" onclick="mudarTema('#6BCB77', this)"></button>
+                <div class="info">
+                    <h3><i class="fas fa-moon"></i> Modo Escuro</h3>
+                    <p>Alternar tema da interface</p>
+                </div>
+                <div class="toggle">
+                    <input type="checkbox" id="darkModeToggle" checked>
+                    <label for="darkModeToggle"></label>
                 </div>
             </div>
             <div class="setting-card">
-                <div class="info"><h3><i class="fas fa-hdd"></i> Armazenamento</h3><p>Arquivos salvos localmente</p></div>
-                <span style="color:#48bb78;font-size:12px;">✅ Seguro</span>
+                <div class="info">
+                    <h3><i class="fas fa-trash-alt"></i> Limpar Dados</h3>
+                    <p>Remover todos os arquivos transferidos</p>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="limparTudo()"><i class="fas fa-trash"></i> Limpar</button>
             </div>
         </div>
     </div>
 
-    <!-- PLAYER VÍDEO -->
+    <!-- MODAL DE QR CODE (GLOBAL) -->
+    <div class="modal" id="qrModal">
+        <div class="modal-content">
+            <button class="close" onclick="fecharModalQr()">&times;</button>
+            <h2><i class="fas fa-qrcode" style="color:var(--accent);"></i> Conexão Rápida</h2>
+            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Acesse por outro dispositivo na mesma rede</p>
+            <div class="qr-container">
+                <img id="modalQrImage" src="" alt="QR Code">
+            </div>
+            <div class="qr-url" id="modalQrUrl">http://--</div>
+            <button class="btn btn-primary" onclick="copiarModalUrl()" style="width:100%;">
+                <i class="fas fa-copy"></i> Copiar Link
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL DE VÍDEO -->
     <div class="video-modal" id="videoModal">
         <div class="video-modal-content">
-            <button class="video-close" onclick="fecharVideo()">✕</button>
-            <video id="videoPlayer" controls></video>
+            <button class="video-close" onclick="fecharVideoModal()">&times;</button>
+            <video id="modalVideoPlayer" controls></video>
             <div class="video-actions">
-                <button class="btn btn-primary" onclick="baixarVideo()"><i class="fas fa-download"></i> Baixar</button>
-                <button class="btn btn-secondary" onclick="compartilharVideo()"><i class="fas fa-share-alt"></i> Compartilhar</button>
+                <button class="btn btn-primary" id="downloadVideoBtn"><i class="fas fa-download"></i> Baixar Vídeo</button>
             </div>
         </div>
     </div>
 
-    <!-- PLAYER ÁUDIO -->
+    <!-- PLAYER DE ÁUDIO FLUTUANTE -->
     <div class="audio-player" id="audioPlayer">
         <div class="audio-player-content">
             <div class="audio-info">
-                <div class="audio-title" id="audioTitle">🎵 Música</div>
+                <div class="audio-title" id="audioTitle">Música Tocando</div>
             </div>
             <div class="audio-controls">
-                <button class="audio-btn" id="audioBtn" onclick="toggleAudio()"><i class="fas fa-play"></i></button>
-                <input type="range" id="audioProgress" min="0" max="100" value="0" class="audio-progress">
-                <div class="audio-time">
-                    <span id="audioCurrentTime">0:00</span>
-                    <span id="audioDuration">0:00</span>
-                </div>
-                <button class="audio-btn audio-close" onclick="fecharAudio()"><i class="fas fa-times"></i></button>
+                <button class="audio-btn" id="audioPlayBtn" onclick="toggleAudioPlay()"><i class="fas fa-play"></i></button>
+                <span class="audio-time" id="audioCurrentTime">0:00</span>
+                <input type="range" class="audio-progress" id="audioProgress" value="0" min="0" max="100">
+                <span class="audio-time" id="audioDuration">0:00</span>
+                <button class="audio-btn audio-close" onclick="fecharAudioPlayer()"><i class="fas fa-times"></i></button>
             </div>
         </div>
+        <audio id="globalAudioElement"></audio>
     </div>
 
-    <!-- QR CODE MODAL -->
-    <div class="modal" id="qrModal">
-        <div class="modal-content">
-            <button class="close" onclick="fecharQR()">✕</button>
-            <h2><i class="fas fa-qrcode"></i> Conectar Celular</h2>
-            <div class="qr-container" id="qrContainer"><p style="color:var(--text-secondary);">⏳ Gerando...</p></div>
-            <p class="qr-url" id="qrUrl">http://...</p>
-            <button class="btn btn-secondary" onclick="copiarLink()"><i class="fas fa-copy"></i> Copiar Link</button>
-        </div>
-    </div>
-
-    <!-- SERVICE WORKER REGISTRO -->
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(() => console.log('✅ Service Worker registrado!'))
-                .catch(err => console.log('❌ Service Worker erro:', err));
-        }
-    </script>
+        // Seu código JavaScript de controle da aplicação entra aqui
+        function login() { /* Lógica de login */ }
+        function register() { /* Lógica de cadastro */ }
+        function logout() { /* Lógica de logout */ }
+        function showRegister() { document.getElementById('loginForm').style.display='none'; document.getElementById('registerForm').style.display='block'; }
+        function showLogin() { document.getElementById('registerForm').style.display='none'; document.getElementById('loginForm').style.display='block'; }
+        function atualizarStatus() { /* Atualizar dados de status */ }
+        function copiarUrlStatus() { /* Copiar IP */ }
+        function gerarQrCode() { /* Gerar QR Code */ }
+        function fecharModalQr() { document.getElementById('qrModal').classList.remove('active'); }
+        function fecharVideoModal() { document.getElementById('videoModal').classList.remove('active'); }
+        function toggleAudioPlay() { /* Play/Pause áudio */ }
+        function fecharAudioPlayer() { document.getElementById('audioPlayer').style.display='none'; }
+        function limparTudo() { /* Limpar cache/dados */ }
 
-    <!-- SCRIPTS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-    <script>
-        // =============================================
-        // AUTENTICAÇÃO
-        // =============================================
-
-        async function login() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            const status = document.getElementById('loginStatus');
-            
-            if (!email || !password) {
-                status.textContent = '❌ Preencha todos os campos';
-                status.className = 'login-status error';
-                return;
-            }
-            
-            try {
-                const res = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    status.textContent = '✅ Login realizado!';
-                    status.className = 'login-status success';
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
-                    
-                    // Mostrar nome do usuário
-                    if (data.user && data.user.username) {
-                        document.getElementById('userNameDisplay').textContent = data.user.username;
-                    }
-                    
-                    init(); // Iniciar o app
-                } else {
-                    status.textContent = '❌ ' + data.error;
-                    status.className = 'login-status error';
-                }
-            } catch(e) {
-                status.textContent = '❌ Erro ao fazer login';
-                status.className = 'login-status error';
-                console.error(e);
-            }
-        }
-
-        async function register() {
-            const username = document.getElementById('registerUsername').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            const status = document.getElementById('registerStatus');
-            
-            if (!username || !email || !password) {
-                status.textContent = '❌ Preencha todos os campos';
-                status.className = 'login-status error';
-                return;
-            }
-            
-            try {
-                const res = await fetch('/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    status.textContent = '✅ Cadastro realizado! Faça login.';
-                    status.className = 'login-status success';
-                    setTimeout(() => {
-                        showLogin();
-                        document.getElementById('loginEmail').value = email;
-                    }, 1500);
-                } else {
-                    status.textContent = '❌ ' + data.error;
-                    status.className = 'login-status error';
-                }
-            } catch(e) {
-                status.textContent = '❌ Erro ao cadastrar';
-                status.className = 'login-status error';
-                console.error(e);
-            }
-        }
-
-        async function logout() {
-            try {
-                await fetch('/api/auth/logout', { method: 'POST' });
-                document.getElementById('mainContent').style.display = 'none';
-                document.getElementById('loginScreen').style.display = 'flex';
-                document.getElementById('loginStatus').textContent = '';
-                document.getElementById('loginStatus').className = 'login-status';
-                console.log('✅ Logout realizado');
-            } catch(e) {
-                console.error('❌ Erro no logout:', e);
-            }
-        }
-
-        function showRegister() {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-            document.getElementById('loginStatus').textContent = '';
-            document.getElementById('loginStatus').className = 'login-status';
-            document.getElementById('registerStatus').textContent = '';
-            document.getElementById('registerStatus').className = 'login-status';
-        }
-
-        function showLogin() {
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('loginStatus').textContent = '';
-            document.getElementById('loginStatus').className = 'login-status';
-            document.getElementById('registerStatus').textContent = '';
-            document.getElementById('registerStatus').className = 'login-status';
-        }
-
-        // =============================================
-        // CONEXZ - SCRIPT COMPLETO
-        // =============================================
-
-        const socket = io();
-        let videoAtual = null;
-        let audioAtual = null;
-        let audioTocando = false;
-        let statusInterval = null;
-        let currentQRCode = null;
-
-        async function init() {
-            try {
-                const res = await fetch('/api/device');
-                const data = await res.json();
-                document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0,8);
-                await carregarArquivos();
-                await carregarStatus();
-                configurarEventos();
-                iniciarStatusAutomatico();
-                console.log('✅ ConexZ inicializado!');
-            } catch(e) {
-                console.error('❌ Erro:', e);
-                mostrarStatus('Erro ao inicializar', 'error');
-            }
-        }
-
-        async function carregarStatus() {
-            try {
-                const res = await fetch('/api/status-completo');
-                const data = await res.json();
-                
-                document.getElementById('statusIP').textContent = data.ip || '--';
-                document.getElementById('statusPort').textContent = data.port || '--';
-                document.getElementById('statusTime').textContent = data.hora || '--';
-                document.getElementById('statusDate').textContent = data.data || '--';
-                document.getElementById('statusFiles').textContent = data.arquivos || 0;
-                document.getElementById('statusVideos').textContent = (data.videos || 0) + ' 🎬';
-                document.getElementById('statusMusicas').textContent = (data.musicas || 0) + ' 🎵';
-                document.getElementById('statusImagens').textContent = (data.imagens || 0) + ' 🖼️';
-                
-                const url = `http://${data.ip || '--'}:${data.port || '--'}`;
-                document.getElementById('statusUrl').textContent = url;
-                document.getElementById('manualIp').textContent = 'https://conexz-app.onrender.com';
-                
-                const badge = document.getElementById('statusBadge');
-                if (data.status === 'online') {
-                    badge.textContent = '🟢 Online';
-                    badge.className = 'status-badge';
-                } else {
-                    badge.textContent = '🔴 Offline';
-                    badge.className = 'status-badge offline';
-                }
-            } catch(e) {
-                console.error('❌ Erro ao carregar status:', e);
-            }
-        }
-
-        function atualizarStatus() {
-            carregarStatus();
-            mostrarStatus('🔄 Status atualizado!', 'info');
-        }
-
-        function copiarUrlStatus() {
-            const url = document.getElementById('statusUrl').textContent;
-            if (url && url !== '--') {
-                navigator.clipboard.writeText(url).then(() => {
-                    mostrarStatus('✅ URL copiada!', 'success');
-                }).catch(() => {
-                    prompt('Copie a URL:', url);
-                });
-            }
-        }
-
-        function iniciarStatusAutomatico() {
-            if (statusInterval) clearInterval(statusInterval);
-            statusInterval = setInterval(carregarStatus, 30000);
-        }
-
-        async function detectarIP() {
-            try {
-                const res = await fetch('/api/device');
-                const data = await res.json();
-                mostrarStatus(`📡 IP: ${data.ip}:${data.port}`, 'info');
-            } catch(e) {
-                mostrarStatus('❌ Erro ao detectar IP', 'error');
-            }
-        }
-
-        // =============================================
-        // QR CODE CONEXÃO
-        // =============================================
-
-        async function gerarQRCodeConexao() {
-            try {
-                const res = await fetch('/api/qr');
-                const data = await res.json();
-                
-                const img = document.getElementById('qrCodeImage');
-                const status = document.getElementById('qrStatus');
-                const linkDisplay = document.getElementById('linkDisplayConexao');
-                const linkText = document.getElementById('connectionLinkText');
-                
-                if (data.qr) {
-                    img.src = `data:image/png;base64,${data.qr}`;
-                    img.style.display = 'block';
-                    status.textContent = '📷 Escaneie com a câmera do celular';
-                    status.style.color = 'var(--accent)';
-                    
-                    linkText.textContent = data.url;
-                    linkDisplay.style.display = 'block';
-                    
-                    document.getElementById('manualIp').textContent = data.url;
-                    
-                    currentQRCode = data.url;
-                    document.getElementById('gerarQRBtn').innerHTML = '<i class="fas fa-sync"></i> Atualizar QR Code';
-                    
-                    mostrarStatus('✅ QR Code gerado! Escaneie com o celular', 'success');
-                }
-            } catch(e) {
-                console.error('Erro:', e);
-                mostrarStatus('❌ Erro ao gerar QR Code', 'error');
-            }
-        }
-
-        // =============================================
-        // CONFIGURAR EVENTOS
-        // =============================================
-
-        function configurarEventos() {
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    const tabName = this.dataset.tab;
-                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-                    const target = document.getElementById('tab-' + tabName);
-                    if(target) target.classList.add('active');
-                    if(['videos', 'music', 'images', 'files'].includes(tabName)) {
-                        carregarArquivos();
-                    }
-                });
+        // Controle de Abas
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                const target = document.getElementById('tab-' + tab.getAttribute('data-tab'));
+                if(target) target.classList.add('active');
             });
-
-            document.getElementById('qrBtn').addEventListener('click', gerarQR);
-            document.getElementById('ipBtn').addEventListener('click', detectarIP);
-            document.getElementById('refreshBtn').addEventListener('click', carregarArquivos);
-
-            const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('fileInput');
-            
-            dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('dragover');
-            });
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                if(e.dataTransfer.files.length) {
-                    enviarArquivos(e.dataTransfer.files);
-                }
-            });
-            fileInput.addEventListener('change', () => {
-                if(fileInput.files.length) {
-                    enviarArquivos(fileInput.files);
-                    fileInput.value = '';
-                }
-            });
-
-            document.getElementById('searchInput').addEventListener('input', function() {
-                const query = this.value.toLowerCase();
-                document.querySelectorAll('.file-item').forEach(item => {
-                    const name = item.dataset.name || '';
-                    item.style.display = name.includes(query) ? 'flex' : 'none';
-                });
-            });
-
-            document.getElementById('darkMode').addEventListener('change', function() {
-                if(this.checked) {
-                    document.documentElement.style.setProperty('--bg-primary', '#f0f4f8');
-                    document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
-                    document.documentElement.style.setProperty('--bg-card', '#e8edf3');
-                    document.documentElement.style.setProperty('--bg-hover', '#dce3ea');
-                    document.documentElement.style.setProperty('--text-primary', '#1a202c');
-                    document.documentElement.style.setProperty('--text-secondary', '#4a5568');
-                    document.documentElement.style.setProperty('--text-muted', '#718096');
-                    document.documentElement.style.setProperty('--border', '#cbd5e0');
-                } else {
-                    document.documentElement.style.setProperty('--bg-primary', '#0a0a1a');
-                    document.documentElement.style.setProperty('--bg-secondary', '#12122a');
-                    document.documentElement.style.setProperty('--bg-card', '#1a1a3e');
-                    document.documentElement.style.setProperty('--bg-hover', '#252550');
-                    document.documentElement.style.setProperty('--text-primary', '#ffffff');
-                    document.documentElement.style.setProperty('--text-secondary', '#a0aec0');
-                    document.documentElement.style.setProperty('--text-muted', '#6a7a8e');
-                    document.documentElement.style.setProperty('--border', '#2a2a5a');
-                }
-            });
-
-            socket.on('new_file', () => {
-                carregarArquivos();
-                carregarStatus();
-                mostrarStatus('📄 Novo arquivo recebido!', 'success');
-            });
-            socket.on('file_deleted', () => {
-                carregarArquivos();
-                carregarStatus();
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if(e.key === 'Escape') {
-                    fecharVideo();
-                    fecharQR();
-                    fecharAudio();
-                }
-            });
-
-            document.getElementById('videoModal').addEventListener('click', function(e) {
-                if(e.target === this) fecharVideo();
-            });
-            document.getElementById('qrModal').addEventListener('click', function(e) {
-                if(e.target === this) fecharQR();
-            });
-        }
-
-        // =============================================
-        // UPLOAD
-        // =============================================
-
-        async function enviarArquivos(files) {
-            const form = new FormData();
-            for(let f of files) form.append('file', f);
-            
-            const progress = document.getElementById('progressContainer');
-            const fill = document.getElementById('progressFill');
-            const text = document.getElementById('progressText');
-            progress.style.display = 'flex';
-            fill.style.width = '0%';
-            text.textContent = '0%';
-            
-            mostrarStatus('⏳ Enviando...', 'info');
-            
-            try {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', '/api/upload');
-                
-                xhr.upload.onprogress = (e) => {
-                    if(e.lengthComputable) {
-                        const pct = Math.round((e.loaded / e.total) * 100);
-                        fill.style.width = pct + '%';
-                        text.textContent = pct + '%';
-                    }
-                };
-                
-                xhr.onload = () => {
-                    progress.style.display = 'none';
-                    if(xhr.status === 200) {
-                        mostrarStatus('✅ Arquivo enviado com sucesso!', 'success');
-                        carregarArquivos();
-                        carregarStatus();
-                    } else {
-                        mostrarStatus('❌ Erro ao enviar', 'error');
-                    }
-                };
-                
-                xhr.onerror = () => {
-                    progress.style.display = 'none';
-                    mostrarStatus('❌ Erro de conexão', 'error');
-                };
-                
-                xhr.send(form);
-            } catch(e) {
-                progress.style.display = 'none';
-                mostrarStatus('❌ Erro ao enviar', 'error');
-            }
-        }
-
-        // =============================================
-        // ARQUIVOS
-        // =============================================
-
-        async function carregarArquivos() {
-            try {
-                const res = await fetch('/api/files');
-                const files = await res.json();
-                renderizarArquivos(files);
-                renderizarMidia(files);
-                document.getElementById('fileCount').textContent = files.length;
-            } catch(e) {
-                console.error('❌ Erro:', e);
-                mostrarStatus('Erro ao carregar arquivos', 'error');
-            }
-        }
-
-        function renderizarArquivos(files) {
-            const list = document.getElementById('fileList');
-            if(!files.length) {
-                list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhum arquivo encontrado</p><p style="font-size:14px;">Envie seu primeiro arquivo!</p></div>`;
-                return;
-            }
-            
-            list.innerHTML = files.map(f => `
-                <div class="file-item" data-name="${f.name.toLowerCase()}">
-                    <div class="file-info">
-                        <i class="${getIcon(f.name)}"></i>
-                        <div class="file-details">
-                            <div class="file-name">${f.name}</div>
-                            <div class="file-meta">${f.size_formatted} • ${f.date}</div>
-                        </div>
-                    </div>
-                    <div class="file-actions">
-                        <button class="btn btn-sm btn-secondary" onclick="visualizarArquivo('${f.id}')" title="Visualizar"><i class="fas fa-eye"></i></button>
-                        <button class="btn btn-sm btn-secondary" onclick="baixarArquivo('${f.id}')" title="Baixar"><i class="fas fa-download"></i></button>
-                        <button class="btn btn-sm btn-secondary" onclick="compartilharArquivo('${f.id}')" title="Compartilhar"><i class="fas fa-share-alt"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="deletarArquivo('${f.id}')" title="Deletar"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderizarMidia(files) {
-            const videos = files.filter(f => f.name.match(/\.(mp4|webm|mov|mkv|avi)$/i));
-            const audios = files.filter(f => f.name.match(/\.(mp3|wav|ogg|flac|m4a)$/i));
-            const imagens = files.filter(f => f.name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i));
-            
-            document.getElementById('videoGrid').innerHTML = videos.length ? 
-                videos.map(v => `
-                    <div class="media-card" onclick="playVideo('${v.id}')">
-                        <video><source src="/api/view/${v.id}"></video>
-                        <div class="media-info">
-                            <div class="media-title">${v.name}</div>
-                            <div class="media-meta">${v.size_formatted}</div>
-                        </div>
-                    </div>
-                `).join('') :
-                `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-play-circle"></i><p>Nenhum vídeo encontrado</p></div>`;
-            
-            document.getElementById('musicGrid').innerHTML = audios.length ?
-                audios.map(a => `
-                    <div class="media-card" onclick="playAudio('${a.id}')">
-                        <div class="media-preview"><i class="fas fa-music"></i></div>
-                        <div class="media-info">
-                            <div class="media-title">${a.name}</div>
-                            <div class="media-meta">${a.size_formatted}</div>
-                        </div>
-                    </div>
-                `).join('') :
-                `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-music"></i><p>Nenhuma música encontrada</p></div>`;
-            
-            document.getElementById('imageGrid').innerHTML = imagens.length ?
-                imagens.map(i => `
-                    <div class="media-card" onclick="visualizarArquivo('${i.id}')">
-                        <div class="media-preview"><i class="fas fa-image" style="font-size:40px;"></i></div>
-                        <div class="media-info">
-                            <div class="media-title">${i.name}</div>
-                            <div class="media-meta">${i.size_formatted}</div>
-                        </div>
-                    </div>
-                `).join('') :
-                `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-images"></i><p>Nenhuma imagem encontrada</p></div>`;
-        }
-
-        // =============================================
-        // VÍDEO
-        // =============================================
-
-        function playVideo(id) {
-            videoAtual = id;
-            const modal = document.getElementById('videoModal');
-            const player = document.getElementById('videoPlayer');
-            player.src = '/api/view/' + id;
-            modal.classList.add('active');
-            player.play();
-        }
-
-        function fecharVideo() {
-            const player = document.getElementById('videoPlayer');
-            player.pause();
-            player.src = '';
-            document.getElementById('videoModal').classList.remove('active');
-        }
-
-        function baixarVideo() { if(videoAtual) baixarArquivo(videoAtual); }
-        function compartilharVideo() { if(videoAtual) compartilharArquivo(videoAtual); }
-
-        // =============================================
-        // ÁUDIO
-        // =============================================
-
-        function playAudio(id) {
-            if(audioAtual) { audioAtual.pause(); audioAtual = null; }
-            
-            audioAtual = new Audio('/api/view/' + id);
-            
-            fetch('/api/files').then(r => r.json()).then(files => {
-                const f = files.find(x => x.id === id);
-                if(f) document.getElementById('audioTitle').textContent = '🎵 ' + f.name;
-            });
-            
-            audioAtual.ontimeupdate = () => {
-                if(audioAtual.duration) {
-                    const pct = (audioAtual.currentTime / audioAtual.duration) * 100;
-                    document.getElementById('audioProgress').value = pct;
-                    document.getElementById('audioCurrentTime').textContent = formatTempo(audioAtual.currentTime);
-                }
-            };
-            
-            audioAtual.onloadedmetadata = () => {
-                document.getElementById('audioDuration').textContent = formatTempo(audioAtual.duration);
-            };
-            
-            audioAtual.onended = fecharAudio;
-            audioAtual.onerror = () => mostrarStatus('❌ Erro ao tocar música', 'error');
-            
-            document.getElementById('audioPlayer').style.display = 'block';
-            audioAtual.play();
-            audioTocando = true;
-            document.getElementById('audioBtn').innerHTML = '<i class="fas fa-pause"></i>';
-        }
-
-        function toggleAudio() {
-            if(!audioAtual) return;
-            if(audioTocando) {
-                audioAtual.pause();
-                document.getElementById('audioBtn').innerHTML = '<i class="fas fa-play"></i>';
-            } else {
-                audioAtual.play();
-                document.getElementById('audioBtn').innerHTML = '<i class="fas fa-pause"></i>';
-            }
-            audioTocando = !audioTocando;
-        }
-
-        function fecharAudio() {
-            if(audioAtual) { audioAtual.pause(); audioAtual.src = ''; audioAtual = null; }
-            document.getElementById('audioPlayer').style.display = 'none';
-            audioTocando = false;
-            document.getElementById('audioBtn').innerHTML = '<i class="fas fa-play"></i>';
-        }
-
-        // =============================================
-        // QR CODE MODAL
-        // =============================================
-
-        async function gerarQR() {
-            const modal = document.getElementById('qrModal');
-            const container = document.getElementById('qrContainer');
-            const urlEl = document.getElementById('qrUrl');
-            modal.classList.add('active');
-            container.innerHTML = '<p style="color:var(--text-secondary);">⏳ Gerando...</p>';
-            
-            try {
-                const res = await fetch('/api/qr');
-                const data = await res.json();
-                container.innerHTML = `<img src="data:image/png;base64,${data.qr}">`;
-                urlEl.textContent = data.url || 'https://conexz-app.onrender.com';
-            } catch(e) {
-                container.innerHTML = '<p style="color:#e53e3e;">❌ Erro ao gerar QR Code</p>';
-                urlEl.textContent = 'https://conexz-app.onrender.com';
-            }
-        }
-
-        function fecharQR() {
-            document.getElementById('qrModal').classList.remove('active');
-        }
-
-        async function copiarLink() {
-            const url = document.getElementById('qrUrl').textContent;
-            await navigator.clipboard.writeText(url);
-            mostrarStatus('✅ Link copiado!', 'success');
-        }
-
-        // =============================================
-        // FUNÇÕES COMPARTILHADAS
-        // =============================================
-
-        function visualizarArquivo(id) {
-            window.open('/api/view/' + id, '_blank');
-        }
-        
-        function baixarArquivo(id) {
-            window.location.href = '/api/download/' + id;
-            mostrarStatus('⬇️ Download iniciado', 'success');
-        }
-
-        async function compartilharArquivo(id) {
-            try {
-                const res = await fetch('/api/share/' + id);
-                const data = await res.json();
-                await navigator.clipboard.writeText(data.link);
-                mostrarStatus('✅ Link copiado!', 'success');
-                alert('Link compartilhável:\n' + data.link + '\n\nVálido por 24 horas');
-            } catch(e) {
-                mostrarStatus('❌ Erro ao compartilhar', 'error');
-            }
-        }
-
-        async function deletarArquivo(id) {
-            if(!confirm('Tem certeza que deseja deletar este arquivo?')) return;
-            try {
-                await fetch('/api/delete/' + id, { method: 'DELETE' });
-                mostrarStatus('🗑️ Arquivo deletado', 'success');
-                carregarArquivos();
-                carregarStatus();
-            } catch(e) {
-                mostrarStatus('❌ Erro ao deletar', 'error');
-            }
-        }
-
-        // =============================================
-        // TEMAS
-        // =============================================
-
-        function mudarTema(cor, btn) {
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.documentElement.style.setProperty('--accent', cor);
-            document.querySelectorAll('.btn-primary').forEach(b => {
-                b.style.background = cor;
-            });
-            document.querySelectorAll('.tab.active').forEach(t => {
-                t.style.background = cor;
-                t.style.borderColor = cor;
-            });
-            document.querySelectorAll('.badge').forEach(b => {
-                b.style.background = cor;
-            });
-            document.querySelectorAll('.logo-icon').forEach(l => {
-                l.style.background = cor;
-            });
-        }
-
-        // =============================================
-        // UTILITÁRIOS
-        // =============================================
-
-        function getIcon(name) {
-            if(name.match(/\.(mp4|webm|mov|mkv|avi)$/i)) return 'fas fa-play-circle';
-            if(name.match(/\.(mp3|wav|ogg|flac|m4a)$/i)) return 'fas fa-music';
-            if(name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) return 'fas fa-image';
-            if(name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$/i)) return 'fas fa-file-pdf';
-            if(name.match(/\.(zip|rar|7z|tar|gz)$/i)) return 'fas fa-file-archive';
-            return 'fas fa-file';
-        }
-
-        function formatTempo(segundos) {
-            if(!segundos || isNaN(segundos)) return '0:00';
-            const m = Math.floor(segundos / 60);
-            const s = Math.floor(segundos % 60);
-            return m + ':' + (s < 10 ? '0' : '') + s;
-        }
-
-        function mostrarStatus(msg, tipo) {
-            const el = document.getElementById('status');
-            el.textContent = msg;
-            el.className = 'status ' + tipo;
-            el.style.display = 'block';
-            clearTimeout(el._timeout);
-            el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
-        }
-
-        // EXPORTAR FUNÇÕES
-        window.playVideo = playVideo;
-        window.fecharVideo = fecharVideo;
-        window.baixarVideo = baixarVideo;
-        window.compartilharVideo = compartilharVideo;
-        window.playAudio = playAudio;
-        window.toggleAudio = toggleAudio;
-        window.fecharAudio = fecharAudio;
-        window.visualizarArquivo = visualizarArquivo;
-        window.baixarArquivo = baixarArquivo;
-        window.compartilharArquivo = compartilharArquivo;
-        window.deletarArquivo = deletarArquivo;
-        window.gerarQR = gerarQR;
-        window.fecharQR = fecharQR;
-        window.copiarLink = copiarLink;
-        window.mudarTema = mudarTema;
-        window.detectarIP = detectarIP;
-        window.atualizarStatus = atualizarStatus;
-        window.copiarUrlStatus = copiarUrlStatus;
-        window.gerarQRCodeConexao = gerarQRCodeConexao;
-        window.login = login;
-        window.register = register;
-        window.logout = logout;
-        window.showRegister = showRegister;
-        window.showLogin = showLogin;
-
-        document.addEventListener('DOMContentLoaded', init);
-
-        window.addEventListener('beforeunload', function() {
-            if (statusInterval) clearInterval(statusInterval);
         });
     </script>
 </body>
