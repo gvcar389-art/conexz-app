@@ -709,14 +709,14 @@ if __name__ == '__main__':
     
     print("""
     ╔═══════════════════════════════════════════════════════════════╗
-    ║   📱 CONEXZ - TRANSFERÊNCIA INTELIGENTE (PROFISSIONAL)      ║
+    ║   📱 CONEXZ - TRANSFERÊNCIA INTELIGENTE (PROFISSIONAL)       ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║  🌐  LOCAL:    http://localhost:{}                           ║
-    ║  📱  CELULAR:  http://{}:{}                ║
-    ║  📱  DISPOSITIVO: {}                                     ║
-    ║  🔐  SEGURANÇA: Login com email                            ║
-    ║  📤  COMPARTILHAR: Entre usuários                           ║
-    ║  💾  ARQUIVOS: Por usuário                                  ║
+    ║   🌐  LOCAL:    http://localhost:{}                           ║
+    ║   📱  CELULAR:  http://{}:{}                                ║
+    ║   📱  DISPOSITIVO: {}                                       ║
+    ║   🔐  SEGURANÇA: Login com email                              ║
+    ║   📤  COMPARTILHAR: Entre usuários                            ║
+    ║   💾  ARQUIVOS: Por usuário                                   ║
     ╚═══════════════════════════════════════════════════════════════╝
     """.format(port, ip, port, device_id[:8]))
     
