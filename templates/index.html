@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ConexZ - Transferência Inteligente</title>
     
-    <!-- ⭐ CONFIGURAÇÕES PARA O PWA ⭐ -->
+    <!-- CONFIGURAÇÕES PWA -->
     <link rel="manifest" href="/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -17,11 +17,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-        /* ============================================
-            RESET E CONFIGURAÇÕES GERAIS
-            ============================================ */
-        
-        * { margin:0; padding:0; box-sizing:border-box; }
+        /* RESET E VARIÁVEIS DE DESIGN */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --bg-primary: #0a0a1a;
             --bg-secondary: #12122a;
@@ -32,161 +29,109 @@
             --text-muted: #6a7a8e;
             --accent: #00d4ff;
             --border: #2a2a5a;
-            --shadow: 0 8px 32px rgba(0,0,0,0.4);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
             --radius: 16px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; }
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg-primary); 
+            color: var(--text-primary); 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+        }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-secondary); }
         ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
         
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         
-        /* ===== TELA DE LOGIN ===== */
+        /* TELA DE LOGIN (EFEITO FILME/GLASSMORPHISM) */
         .login-screen {
             position: fixed;
             inset: 0;
-            background: var(--bg-primary);
+            background: radial-gradient(circle at center, #1a1a3e 0%, #0a0a1a 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 9999;
             backdrop-filter: blur(20px);
+            padding: 20px;
         }
         .login-container {
-            background: var(--bg-secondary);
+            background: rgba(18, 18, 42, 0.85);
             border-radius: var(--radius);
-            padding: 48px 40px;
+            padding: 40px;
             width: 100%;
             max-width: 420px;
             border: 1px solid var(--border);
             box-shadow: var(--shadow);
             text-align: center;
+            backdrop-filter: blur(10px);
         }
-        .login-logo {
-            margin-bottom: 32px;
+        .login-logo { margin-bottom: 28px; }
+        .login-logo i { font-size: 52px; color: var(--accent); margin-bottom: 12px; }
+        .login-logo h1 { 
+            font-size: 32px; 
+            font-weight: 800; 
+            background: linear-gradient(135deg, var(--accent), #fff); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
         }
-        .login-logo i {
-            font-size: 56px;
-            color: var(--accent);
-            margin-bottom: 12px;
+        .login-logo p { color: var(--text-secondary); font-size: 14px; margin-top: 4px; }
+        .login-container h2 { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
+        .login-container input { 
+            width: 100%; 
+            padding: 14px 16px; 
+            border-radius: 12px; 
+            border: 1px solid var(--border); 
+            background: var(--bg-primary); 
+            color: var(--text-primary); 
+            font-size: 14px; 
+            font-family: inherit; 
+            transition: var(--transition); 
+            margin-bottom: 12px; 
         }
-        .login-logo h1 {
-            font-size: 32px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent), #fff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .login-logo p {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-top: 4px;
-        }
-        .login-container h2 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: var(--text-primary);
-        }
-        .login-container input {
-            width: 100%;
-            padding: 14px 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 14px;
-            font-family: inherit;
-            transition: var(--transition);
-            margin-bottom: 12px;
-        }
-        .login-container input:focus {
-            border-color: var(--accent);
-            outline: none;
-            box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
-        }
-        .login-container input::placeholder {
-            color: var(--text-muted);
-        }
-        .login-container .btn {
-            width: 100%;
-            justify-content: center;
-            padding: 14px;
-            font-size: 16px;
-            margin-top: 8px;
-        }
-        .login-link {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-top: 16px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-        .login-link:hover {
-            color: var(--accent);
-        }
-        .login-status {
-            margin-top: 12px;
-            padding: 10px 14px;
-            border-radius: 10px;
-            font-size: 14px;
-            display: none;
-        }
-        .login-status.success {
-            display: block;
-            background: rgba(72,187,120,0.15);
-            border: 1px solid #48bb78;
-            color: #48bb78;
-        }
-        .login-status.error {
-            display: block;
-            background: rgba(229,62,62,0.15);
-            border: 1px solid #fc8181;
-            color: #fc8181;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 16px 8px 20px;
-            background: var(--bg-card);
-            border-radius: 20px;
-            border: 1px solid var(--border);
-        }
-        .user-info .username {
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-        .user-info .logout-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 14px;
-            padding: 4px 8px;
-            border-radius: 8px;
-            transition: var(--transition);
-        }
-        .user-info .logout-btn:hover {
-            color: #fc8181;
-            background: rgba(229,62,62,0.1);
-        }
+        .login-container input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 15px rgba(0, 212, 255, 0.2); }
+        .login-container input::placeholder { color: var(--text-muted); }
+        .login-container .btn { width: 100%; justify-content: center; padding: 14px; font-size: 16px; margin-top: 8px; }
+        .login-link { color: var(--text-secondary); font-size: 14px; margin-top: 16px; cursor: pointer; transition: var(--transition); display: block; }
+        .login-link:hover { color: var(--accent); }
+        .login-status { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 13px; display: none; }
+        .login-status.success { display: block; background: rgba(72,187,120,0.15); border: 1px solid #48bb78; color: #48bb78; }
+        .login-status.error { display: block; background: rgba(229,62,62,0.15); border: 1px solid #fc8181; color: #fc8181; }
         
-        /* ===== HEADER ===== */
-        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--bg-secondary); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 24px; box-shadow: var(--shadow); flex-wrap: wrap; gap: 12px; }
+        /* CABEÇALHO DA APLICAÇÃO */
+        header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 16px 24px; 
+            background: var(--bg-secondary); 
+            border-radius: var(--radius); 
+            border: 1px solid var(--border); 
+            margin-bottom: 24px; 
+            box-shadow: var(--shadow); 
+            flex-wrap: wrap; 
+            gap: 12px; 
+        }
         .logo { display: flex; align-items: center; gap: 16px; }
         .logo-icon { width: 48px; height: 48px; background: var(--accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; }
-        .logo h1 { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, var(--accent), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .subtitle { font-size: 12px; color: var(--text-secondary); font-weight: 400; -webkit-text-fill-color: var(--text-secondary); }
+        .logo h1 { font-size: 24px; font-weight: 700; background: linear-gradient(135deg, var(--accent), #fff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
         
         .header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .device-badge { background: var(--bg-card); padding: 8px 16px; border-radius: 20px; font-size: 12px; color: var(--text-secondary); border: 1px solid var(--border); }
+        .user-info { display: flex; align-items: center; gap: 12px; padding: 6px 14px; background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border); }
+        .user-info .username { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .user-info .logout-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 4px; transition: var(--transition); }
+        .user-info .logout-btn:hover { color: #fc8181; }
         
+        /* BOTÕES GERAIS */
         .btn { padding: 10px 20px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-family: inherit; }
-        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary { background: var(--accent); color: #0a0a1a; }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3); }
         .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
         .btn-secondary:hover { background: var(--bg-hover); }
@@ -194,336 +139,213 @@
         .btn-danger:hover { background: #c53030; }
         .btn-sm { padding: 6px 12px; font-size: 12px; }
         
-        /* ===== STATUS PANEL ===== */
-        .status-panel {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px 24px;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow);
-        }
-        .status-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-        .status-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 600;
-            font-size: 16px;
-        }
+        /* PAINEL DE STATUS */
+        .status-panel { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 24px; box-shadow: var(--shadow); }
+        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+        .status-title { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 16px; }
         .status-title i { color: var(--accent); }
-        .status-badge {
-            font-size: 12px;
-            font-weight: 500;
-            padding: 4px 12px;
-            border-radius: 20px;
-            background: rgba(72, 187, 120, 0.2);
-            color: #48bb78;
-        }
-        .status-badge.offline {
-            background: rgba(229, 62, 62, 0.2);
-            color: #fc8181;
-        }
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-        }
-        .status-item {
-            background: var(--bg-primary);
-            border-radius: 12px;
-            padding: 14px 16px;
-            border: 1px solid var(--border);
-            transition: var(--transition);
-        }
+        .status-badge { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 20px; background: rgba(72, 187, 120, 0.2); color: #48bb78; }
+        .status-badge.offline { background: rgba(229, 62, 62, 0.2); color: #fc8181; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .status-item { background: var(--bg-primary); border-radius: 12px; padding: 14px 16px; border: 1px solid var(--border); transition: var(--transition); }
         .status-item:hover { border-color: var(--accent); }
-        .status-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .status-value {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-primary);
-            word-break: break-all;
-        }
-        .status-sub {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-top: 4px;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .status-sub span {
-            background: var(--bg-card);
-            padding: 2px 10px;
-            border-radius: 10px;
-        }
-        .status-actions { display: flex; gap: 8px; }
+        .status-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+        .status-value { font-size: 18px; font-weight: 700; color: var(--text-primary); word-break: break-all; }
+        .status-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .status-sub span { background: var(--bg-card); padding: 2px 8px; border-radius: 8px; }
         
-        /* ===== TABS ===== */
+        /* ABAS */
         .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { padding: 10px 20px; border-radius: 12px; cursor: pointer; background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary); transition: var(--transition); font-size: 14px; font-weight: 500; }
         .tab:hover { border-color: var(--accent); color: #fff; }
         .tab.active { background: var(--accent); border-color: var(--accent); color: #0a0a1a; font-weight: 600; }
-        .badge { background: var(--accent); color: #0a0a1a; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+        .badge { background: var(--bg-card); color: var(--text-primary); padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 6px; }
         
-        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .tab-content h2 { margin-bottom: 24px; font-weight: 600; display: flex; align-items: center; gap: 12px; font-size: 20px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-content h2 { margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; font-size: 18px; }
         .tab-content h2 i { color: var(--accent); }
         
-        /* ===== UPLOAD ===== */
-        .upload-area { border: 3px dashed var(--border); border-radius: var(--radius); padding: 60px 40px; text-align: center; cursor: pointer; transition: var(--transition); background: var(--bg-primary); }
-        .upload-area:hover { border-color: var(--accent); background: var(--bg-card); }
-        .upload-area.dragover { border-color: var(--accent); background: var(--bg-card); transform: scale(1.02); }
-        .upload-icon i { font-size: 56px; color: var(--accent); margin-bottom: 16px; }
-        .upload-area h3 { font-size: 20px; margin-bottom: 8px; }
-        .upload-area p { color: var(--text-secondary); margin-bottom: 12px; }
+        /* ZONA DE UPLOAD */
+        .upload-area { border: 2px dashed var(--border); border-radius: var(--radius); padding: 50px 20px; text-align: center; cursor: pointer; transition: var(--transition); background: var(--bg-primary); }
+        .upload-area:hover, .upload-area.dragover { border-color: var(--accent); background: var(--bg-card); }
+        .upload-icon i { font-size: 48px; color: var(--accent); margin-bottom: 16px; }
+        .upload-area h3 { font-size: 18px; margin-bottom: 6px; }
+        .upload-area p { color: var(--text-secondary); font-size: 14px; margin-bottom: 12px; }
         .upload-area input { display: none; }
-        .upload-info { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+        .upload-info { font-size: 12px; color: var(--text-muted); }
         
         .progress-container { margin-top: 20px; display: flex; align-items: center; gap: 16px; }
-        .progress-bar { flex: 1; height: 6px; background: var(--border); border-radius: 10px; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; border-radius: 10px; }
-        #progressText { font-size: 14px; color: var(--text-secondary); min-width: 40px; }
+        .progress-bar { flex: 1; height: 8px; background: var(--border); border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease; border-radius: 10px; }
+        #progressText { font-size: 14px; color: var(--text-secondary); min-width: 45px; }
         
-        /* ===== FILE LIST ===== */
+        /* LISTA DE ARQUIVOS */
         .file-toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-        .search-box { flex: 1; display: flex; align-items: center; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px; padding: 0 16px; transition: var(--transition); min-width: 150px; }
-        .search-box:focus-within { border-color: var(--accent); }
+        .search-box { flex: 1; display: flex; align-items: center; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px; padding: 0 16px; min-width: 200px; }
         .search-box i { color: var(--text-muted); font-size: 14px; }
-        .search-box input { background: transparent; border: none; padding: 12px 12px; color: var(--text-primary); font-size: 14px; font-family: inherit; flex: 1; outline: none; }
+        .search-box input { background: transparent; border: none; padding: 12px; color: var(--text-primary); font-size: 14px; width: 100%; outline: none; }
         
         .file-list { display: grid; gap: 10px; }
-        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border); transition: var(--transition); flex-wrap: wrap; gap: 8px; }
-        .file-item:hover { transform: translateX(4px); border-color: var(--accent); }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border); transition: var(--transition); flex-wrap: wrap; gap: 8px; }
+        .file-item:hover { border-color: var(--accent); transform: translateX(4px); }
         .file-info { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 150px; }
-        .file-info i { font-size: 24px; color: var(--accent); width: 32px; text-align: center; }
-        .file-details { flex: 1; min-width: 0; }
-        .file-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-info i { font-size: 22px; color: var(--accent); width: 28px; text-align: center; }
+        .file-name { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .file-meta { font-size: 12px; color: var(--text-secondary); }
-        .file-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+        .file-actions { display: flex; gap: 6px; flex-shrink: 0; }
         
-        /* ===== MEDIA GRID ===== */
-        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; padding-top: 8px; }
+        /* GALERIAS MIDIA */
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
         .media-card { background: var(--bg-primary); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); transition: var(--transition); cursor: pointer; }
-        .media-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
-        .media-preview { width: 100%; height: 120px; background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--accent); }
-        .media-card video { width: 100%; height: 120px; object-fit: cover; background: #000; }
-        .media-info { padding: 12px 16px; }
-        .media-title { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .media-meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        .media-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+        .media-preview { width: 100%; height: 120px; background: var(--bg-card); display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--accent); }
+        .media-card video, .media-card img { width: 100%; height: 120px; object-fit: cover; }
+        .media-info { padding: 12px; }
+        .media-title { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .media-meta { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
         
-        /* ===== MODALS ===== */
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
+        /* MODAIS */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal.active { display: flex; }
-        .modal-content { background: var(--bg-secondary); padding: 32px 40px; border-radius: var(--radius); width: 90%; max-width: 450px; border: 1px solid var(--border); text-align: center; position: relative; }
-        .modal-content .close { position: absolute; top: 12px; right: 16px; font-size: 24px; cursor: pointer; color: var(--text-secondary); transition: var(--transition); background: none; border: none; }
-        .modal-content .close:hover { color: #fff; transform: rotate(90deg); }
-        .modal-content h2 { margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .qr-container img { max-width: 220px; border-radius: 12px; border: 3px solid var(--accent); }
-        .qr-url { font-size: 12px; color: var(--accent); background: var(--bg-primary); padding: 8px 12px; border-radius: 8px; margin: 8px 0 16px; word-break: break-all; }
+        .modal-content { background: var(--bg-secondary); padding: 32px; border-radius: var(--radius); width: 100%; max-width: 420px; border: 1px solid var(--border); text-align: center; position: relative; }
+        .modal-content .close { position: absolute; top: 12px; right: 16px; font-size: 24px; cursor: pointer; color: var(--text-secondary); background: none; border: none; }
+        .qr-container img { max-width: 200px; border-radius: 12px; border: 2px solid var(--accent); margin: 16px 0; }
+        .qr-url { font-size: 12px; color: var(--accent); background: var(--bg-primary); padding: 8px 12px; border-radius: 8px; margin-bottom: 16px; word-break: break-all; }
         
-        /* ===== VIDEO MODAL ===== */
-        .video-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
+        /* VIDEO MODAL */
+        .video-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .video-modal.active { display: flex; }
-        .video-modal-content { width: 90%; max-width: 900px; position: relative; }
-        .video-modal-content video { width: 100%; border-radius: var(--radius); background: #000; max-height: 80vh; }
-        .video-close { position: absolute; top: -50px; right: 0; background: none; border: none; color: #fff; font-size: 30px; cursor: pointer; transition: var(--transition); }
-        .video-close:hover { transform: rotate(90deg); color: var(--accent); }
-        .video-actions { display: flex; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+        .video-modal-content { width: 100%; max-width: 900px; position: relative; }
+        .video-modal-content video { width: 100%; border-radius: var(--radius); max-height: 75vh; background: #000; }
+        .video-close { position: absolute; top: -40px; right: 0; background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; }
+        .video-actions { display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
         
-        /* ===== AUDIO PLAYER ===== */
-        .audio-player { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); border: 1px solid var(--accent); border-radius: var(--radius); padding: 12px 20px; z-index: 999; box-shadow: 0 8px 40px rgba(0,212,255,0.15); min-width: 350px; max-width: 600px; animation: slideUp 0.4s ease; display: none; }
-        @keyframes slideUp { from { transform: translateX(-50%) translateY(80px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        /* PLAYER AUDIO FIXO */
+        .audio-player { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); border: 1px solid var(--accent); border-radius: var(--radius); padding: 12px 20px; z-index: 999; box-shadow: var(--shadow); width: 90%; max-width: 600px; display: none; }
         .audio-player-content { display: flex; align-items: center; gap: 12px; }
         .audio-info { flex: 1; min-width: 80px; }
         .audio-title { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .audio-controls { display: flex; align-items: center; gap: 8px; flex: 2; }
-        .audio-btn { background: none; border: none; color: #fff; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; transition: var(--transition); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+        .audio-btn { background: none; border: none; color: #fff; font-size: 16px; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: var(--transition); }
         .audio-btn:hover { background: var(--accent); color: #0a0a1a; }
-        .audio-btn.audio-close:hover { background: #e53e3e; color: #fff; }
-        .audio-progress { flex: 1; height: 4px; -webkit-appearance: none; background: var(--border); border-radius: 4px; outline: none; min-width: 60px; }
-        .audio-progress::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; }
-        .audio-time { display: flex; gap: 6px; font-size: 11px; color: var(--text-secondary); min-width: 60px; }
+        .audio-progress { flex: 1; height: 4px; accent-color: var(--accent); cursor: pointer; }
+        .audio-time { font-size: 11px; color: var(--text-secondary); min-width: 60px; }
         
-        /* ===== STATUS MESSAGE ===== */
+        /* STATUS E CONFIGURAÇÕES */
         .status { padding: 12px 16px; border-radius: 12px; margin-top: 12px; display: none; font-size: 14px; }
         .status.success { display: block; background: rgba(72,187,120,0.15); border: 1px solid #48bb78; color: #48bb78; }
         .status.error { display: block; background: rgba(229,62,62,0.15); border: 1px solid #fc8181; color: #fc8181; }
-        .status.info { display: block; background: rgba(0,212,255,0.15); border: 1px solid var(--accent); color: var(--accent); }
-        
-        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
-        .empty-state i { font-size: 48px; color: var(--accent); margin-bottom: 16px; }
-        
-        /* ===== SETTINGS ===== */
-        .setting-card { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; flex-wrap: wrap; gap: 12px; }
-        .setting-card .info h3 { font-size: 14px; display: flex; align-items: center; gap: 8px; }
-        .setting-card .info p { font-size: 12px; color: var(--text-secondary); }
-        
-        .toggle { position: relative; width: 48px; height: 28px; flex-shrink: 0; }
-        .toggle input { opacity: 0; width: 0; height: 0; }
-        .toggle label { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 28px; transition: var(--transition); }
-        .toggle label:before { content: ""; position: absolute; height: 20px; width: 20px; left: 4px; bottom: 4px; background: #fff; border-radius: 50%; transition: var(--transition); }
-        .toggle input:checked + label { background: var(--accent); }
-        .toggle input:checked + label:before { transform: translateX(20px); }
-        
-        .theme-selector { display: flex; gap: 8px; flex-wrap: wrap; }
-        .theme-btn { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: var(--transition); }
-        .theme-btn:hover { transform: scale(1.1); }
-        .theme-btn.active { border-color: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
-        
-        /* ===== QR CODE ===== */
-        #qrCodeImage {
-            max-width: 200px;
-            border-radius: 12px;
-            border: 2px solid var(--accent);
-            margin: 0 auto;
-        }
-        #qrCodeDisplay {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 20px;
-            border: 2px dashed var(--border);
-            min-height: 200px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        #manualIp {
-            font-size: 14px;
-            color: var(--accent);
-            font-family: monospace;
-            word-break: break-all;
-        }
-        
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            .container { padding: 12px; }
-            header { flex-direction: column; text-align: center; }
-            .tabs { gap: 4px; justify-content: center; }
-            .tab { font-size: 12px; padding: 8px 14px; }
-            .file-item { flex-direction: column; align-items: stretch; }
-            .file-actions { justify-content: flex-end; }
-            .media-grid { grid-template-columns: repeat(2, 1fr); }
-            .audio-player { min-width: 90%; bottom: 12px; padding: 10px 14px; }
-            .audio-player-content { flex-wrap: wrap; gap: 8px; }
-            .audio-info { min-width: 100%; text-align: center; }
-            .audio-controls { width: 100%; }
-            .modal-content { padding: 20px; }
-            .login-container { padding: 32px 24px; }
-        }
-        @media (max-width: 480px) {
-            .container { padding: 10px; }
-            .upload-area { padding: 30px 16px; }
-            .media-grid { grid-template-columns: repeat(2, 1fr); }
-        }
+        .setting-card { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px; }
+        .theme-selector { display: flex; gap: 8px; }
+        .theme-btn { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+        .theme-btn.active { border-color: #fff; transform: scale(1.1); }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: var(--border); transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(20px); }
     </style>
 </head>
 <body>
-    <!-- ==========================================
-    TELA DE LOGIN
-    ========================================== -->
-    <div class="login-screen" id="loginScreen">
+
+    <!-- TELA DE AUTENTICAÇÃO -->
+    <div id="loginScreen" class="login-screen">
         <div class="login-container">
             <div class="login-logo">
-                <i class="fas fa-cloud-upload-alt"></i>
+                <i class="fas fa-bolt"></i>
                 <h1>ConexZ</h1>
-                <p>Transferência Inteligente</p>
+                <p>Transferência Inteligente de Arquivos</p>
             </div>
-            
-            <!-- FORMULÁRIO DE LOGIN -->
+
+            <!-- FORMULARIO DE LOGIN -->
             <div id="loginForm">
-                <h2>Entrar</h2>
-                <input type="email" id="loginEmail" placeholder="Seu email" autocomplete="email">
-                <input type="password" id="loginPassword" placeholder="Sua senha" autocomplete="current-password">
-                <button onclick="login()" class="btn btn-primary">Entrar</button>
-                <p class="login-link" onclick="showRegister()">Não tem conta? <strong>Cadastre-se</strong></p>
+                <h2>Acesse sua conta</h2>
+                <input type="email" id="loginEmail" placeholder="Seu e-mail" required>
+                <input type="password" id="loginPassword" placeholder="Sua senha" required>
+                <button class="btn btn-primary" onclick="login()">
+                    <i class="fas fa-sign-in-alt"></i> Entrar
+                </button>
                 <div id="loginStatus" class="login-status"></div>
+                <div class="login-link" onclick="showRegister()">
+                    Não tem uma conta? Cadastre-se
+                </div>
             </div>
-            
-            <!-- FORMULÁRIO DE CADASTRO -->
-            <div id="registerForm" style="display:none;">
-                <h2>Criar Conta</h2>
-                <input type="text" id="registerUsername" placeholder="Nome de usuário">
-                <input type="email" id="registerEmail" placeholder="Seu email">
-                <input type="password" id="registerPassword" placeholder="Sua senha">
-                <button onclick="register()" class="btn btn-primary">Cadastrar</button>
-                <p class="login-link" onclick="showLogin()">Já tem conta? <strong>Faça login</strong></p>
+
+            <!-- FORMULARIO DE CADASTRO -->
+            <div id="registerForm" style="display: none;">
+                <h2>Criar nova conta</h2>
+                <input type="text" id="registerUsername" placeholder="Nome de Usuário" required>
+                <input type="email" id="registerEmail" placeholder="Seu e-mail" required>
+                <input type="password" id="registerPassword" placeholder="Sua senha" required>
+                <button class="btn btn-primary" onclick="register()">
+                    <i class="fas fa-user-plus"></i> Cadastrar
+                </button>
                 <div id="registerStatus" class="login-status"></div>
+                <div class="login-link" onclick="showLogin()">
+                    Já tem uma conta? Faça Login
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- ==========================================
-    CONTEÚDO PRINCIPAL (só aparece após login)
-    ========================================== -->
-    <div class="container" id="mainContent" style="display:none;">
-        <!-- HEADER -->
+    <!-- PAINEL PRINCIPAL -->
+    <div id="mainContent" class="container" style="display: none;">
+        
         <header>
             <div class="logo">
-                <div class="logo-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <div class="logo-icon"><i class="fas fa-bolt"></i></div>
                 <div>
                     <h1>ConexZ</h1>
-                    <span class="subtitle">Transferência Inteligente</span>
+                    <div class="subtitle">Transferência & Streaming</div>
                 </div>
             </div>
+
             <div class="header-actions">
+                <div class="device-badge" id="deviceId">📱 ID: --</div>
+                
                 <div class="user-info">
-                    <i class="fas fa-user" style="color:var(--accent);"></i>
-                    <span class="username" id="userNameDisplay">Usuário</span>
+                    <span class="username" id="userNameDisplay"><i class="fas fa-user"></i> Usuário</span>
                     <button class="logout-btn" onclick="logout()" title="Sair">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
                 </div>
-                <span class="device-badge" id="deviceId"><i class="fas fa-qrcode"></i> ID: ...</span>
-                <button class="btn btn-secondary" id="ipBtn"><i class="fas fa-wifi"></i> IP</button>
-                <button class="btn btn-primary" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</button>
+
+                <button class="btn btn-secondary btn-sm" id="qrBtn">
+                    <i class="fas fa-qrcode"></i> QR Code
+                </button>
             </div>
         </header>
 
-        <!-- STATUS PANEL -->
-        <div class="status-panel" id="statusPanel">
+        <!-- DASHBOARD DE REDE -->
+        <div class="status-panel">
             <div class="status-header">
                 <div class="status-title">
-                    <i class="fas fa-satellite-dish"></i>
-                    <span>Status da Conexão</span>
-                    <span class="status-badge" id="statusBadge">🟢 Online</span>
+                    <i class="fas fa-network-wired"></i> Status da Conexão
                 </div>
                 <div class="status-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="atualizarStatus()">
-                        <i class="fas fa-sync"></i> Atualizar
+                    <span id="statusBadge" class="status-badge">🟢 Online</span>
+                    <button class="btn btn-secondary btn-sm" onclick="atualizarStatus()">
+                        <i class="fas fa-sync"></i>
                     </button>
                 </div>
             </div>
+
             <div class="status-grid">
                 <div class="status-item">
-                    <div class="status-label"><i class="fas fa-wifi"></i> IP</div>
+                    <div class="status-label"><i class="fas fa-globe"></i> Endereço IP</div>
                     <div class="status-value" id="statusIP">--</div>
                     <div class="status-sub">Porta: <span id="statusPort">--</span></div>
                 </div>
                 <div class="status-item">
-                    <div class="status-label"><i class="fas fa-clock"></i> Última Atualização</div>
+                    <div class="status-label"><i class="fas fa-clock"></i> Hora Servidor</div>
                     <div class="status-value" id="statusTime">--</div>
-                    <div class="status-sub" id="statusDate">--</div>
+                    <div class="status-sub"><span id="statusDate">--</span></div>
                 </div>
                 <div class="status-item">
-                    <div class="status-label"><i class="fas fa-file"></i> Arquivos</div>
+                    <div class="status-label"><i class="fas fa-folder"></i> Total de Arquivos</div>
                     <div class="status-value" id="statusFiles">0</div>
                     <div class="status-sub">
                         <span id="statusVideos">0 🎬</span>
@@ -532,198 +354,169 @@
                     </div>
                 </div>
                 <div class="status-item">
-                    <div class="status-label"><i class="fas fa-qrcode"></i> Acesso</div>
-                    <div class="status-value" id="statusUrl">--</div>
-                    <button class="btn btn-sm btn-primary" onclick="copiarUrlStatus()" style="margin-top:8px;width:100%;">
-                        <i class="fas fa-copy"></i> Copiar IP
+                    <div class="status-label"><i class="fas fa-link"></i> URL de Acesso Local</div>
+                    <div class="status-value" id="statusUrl" style="font-size: 13px;">--</div>
+                    <button class="btn btn-secondary btn-sm" style="margin-top: 6px; width: 100%; justify-content: center;" onclick="copiarUrlStatus()">
+                        <i class="fas fa-copy"></i> Copiar URL
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- TABS -->
+        <div id="status" class="status"></div>
+
+        <!-- ABAS -->
         <div class="tabs">
-            <div class="tab active" data-tab="upload">📤 Upload</div>
-            <div class="tab" data-tab="files">📁 Arquivos <span class="badge" id="fileCount">0</span></div>
-            <div class="tab" data-tab="videos">🎬 Vídeos</div>
-            <div class="tab" data-tab="music">🎵 Músicas</div>
-            <div class="tab" data-tab="images">🖼️ Imagens</div>
-            <div class="tab" data-tab="connection">🔗 Conexão</div>
-            <div class="tab" data-tab="settings">⚙️ Config</div>
+            <div class="tab active" data-tab="upload"><i class="fas fa-cloud-upload-alt"></i> Enviar</div>
+            <div class="tab" data-tab="files"><i class="fas fa-folder-open"></i> Arquivos <span id="fileCount" class="badge">0</span></div>
+            <div class="tab" data-tab="videos"><i class="fas fa-video"></i> Vídeos</div>
+            <div class="tab" data-tab="music"><i class="fas fa-music"></i> Músicas</div>
+            <div class="tab" data-tab="images"><i class="fas fa-images"></i> Imagens</div>
+            <div class="tab" data-tab="settings"><i class="fas fa-cog"></i> Configurações</div>
         </div>
 
-        <!-- TAB UPLOAD -->
-        <div class="tab-content active" id="tab-upload">
-            <h2><i class="fas fa-cloud-upload-alt"></i> Enviar Arquivo</h2>
+        <!-- CONTEÚDO ENVIAR -->
+        <div id="tab-upload" class="tab-content active">
             <div class="upload-area" id="dropZone">
-                <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <div class="upload-icon"><i class="fas fa-file-export"></i></div>
                 <h3>Arraste seus arquivos aqui</h3>
-                <p>ou clique para selecionar</p>
+                <p>ou clique para selecionar do dispositivo</p>
                 <input type="file" id="fileInput" multiple>
-                <div class="upload-info">📦 Suporta: MP4, MP3, JPG, PNG, PDF e mais</div>
-                <div class="progress-container" id="progressContainer" style="display:none">
-                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-                    <span id="progressText">0%</span>
-                </div>
+                <div class="upload-info">Suporta vídeos, músicas, imagens e documentos</div>
             </div>
-            <div id="status" class="status"></div>
+
+            <div id="progressContainer" class="progress-container" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+                <span id="progressText">0%</span>
+            </div>
         </div>
 
-        <!-- TAB ARQUIVOS -->
-        <div class="tab-content" id="tab-files">
-            <h2><i class="fas fa-folder"></i> Meus Arquivos</h2>
+        <!-- CONTEÚDO ARQUIVOS -->
+        <div id="tab-files" class="tab-content">
             <div class="file-toolbar">
                 <div class="search-box">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="Buscar arquivo...">
+                    <input type="text" id="searchInput" placeholder="Buscar arquivo por nome...">
                 </div>
-                <button class="btn btn-secondary" id="refreshBtn"><i class="fas fa-sync"></i></button>
+                <button class="btn btn-secondary" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
             </div>
-            <div id="fileList"></div>
+            <div class="file-list" id="fileList"></div>
         </div>
 
-        <!-- TAB VÍDEOS -->
-        <div class="tab-content" id="tab-videos">
-            <h2><i class="fas fa-play-circle"></i> Meus Vídeos</h2>
-            <div id="videoGrid" class="media-grid"></div>
+        <!-- CONTEÚDO VÍDEOS -->
+        <div id="tab-videos" class="tab-content">
+            <h2><i class="fas fa-film"></i> Galeria de Vídeos</h2>
+            <div class="media-grid" id="videoGrid"></div>
         </div>
 
-        <!-- TAB MÚSICAS -->
-        <div class="tab-content" id="tab-music">
-            <h2><i class="fas fa-music"></i> Minhas Músicas</h2>
-            <div id="musicGrid" class="media-grid"></div>
+        <!-- CONTEÚDO MÚSICAS -->
+        <div id="tab-music" class="tab-content">
+            <h2><i class="fas fa-headphones"></i> Músicas e Áudios</h2>
+            <div class="media-grid" id="musicGrid"></div>
         </div>
 
-        <!-- TAB IMAGENS -->
-        <div class="tab-content" id="tab-images">
-            <h2><i class="fas fa-images"></i> Minhas Imagens</h2>
-            <div id="imageGrid" class="media-grid"></div>
+        <!-- CONTEÚDO IMAGENS -->
+        <div id="tab-images" class="tab-content">
+            <h2><i class="fas fa-photo-video"></i> Galeria de Fotos</h2>
+            <div class="media-grid" id="imageGrid"></div>
         </div>
 
-        <!-- TAB CONEXÃO -->
-        <div class="tab-content" id="tab-connection">
-            <h2><i class="fas fa-qrcode"></i> Conectar pelo QR Code</h2>
+        <!-- CONTEÚDO CONFIGURAÇÕES -->
+        <div id="tab-settings" class="tab-content">
+            <h2><i class="fas fa-sliders-h"></i> Configurações</h2>
             
-            <div style="display:grid; gap:20px; grid-template-columns: 1fr 1fr; max-width:800px; margin:0 auto;">
-                <!-- QR CODE -->
-                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border); text-align:center;">
-                    <h3 style="margin-bottom:12px; color:var(--accent);">📷 QR Code</h3>
-                    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Escaneie com a câmera do celular</p>
-                    
-                    <div id="qrCodeDisplay">
-                        <div style="font-size:14px; color:var(--text-secondary);" id="qrStatus">Clique em "Gerar QR Code"</div>
-                        <img id="qrCodeImage" src="" alt="QR Code" style="display:none; max-width:200px; border-radius:12px; border:2px solid var(--accent);">
-                    </div>
-                    <button class="btn btn-primary" onclick="gerarQrCode()" style="margin-top:16px; width:100%;">
-                        <i class="fas fa-qrcode"></i> Gerar QR Code
-                    </button>
+            <div class="setting-card">
+                <div>
+                    <h3>Modo Escuro Completo</h3>
+                    <p style="font-size: 12px; color: var(--text-secondary);">Ajuste visual para melhor visualização</p>
                 </div>
+                <label class="switch">
+                    <input type="checkbox" id="darkMode" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
 
-                <!-- INFO DE REDE -->
-                <div style="background:var(--bg-primary); border-radius:var(--radius); padding:24px; border:1px solid var(--border);">
-                    <h3 style="margin-bottom:12px; color:var(--accent);"><i class="fas fa-network-wired"></i> Endereço de Rede</h3>
-                    <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Digite este endereço no navegador do outro dispositivo:</p>
-                    <div id="manualIp" style="background:var(--bg-card); padding:12px; border-radius:8px; border:1px solid var(--border); margin-bottom:16px;">http://--:--</div>
-                    <button class="btn btn-secondary" onclick="copiarUrlStatus()" style="width:100%;">
-                        <i class="fas fa-copy"></i> Copiar Link
-                    </button>
+            <div class="setting-card">
+                <div>
+                    <h3>Cor do Tema</h3>
+                    <p style="font-size: 12px; color: var(--text-secondary);">Personalize a cor principal</p>
                 </div>
+                <div class="theme-selector">
+                    <button class="theme-btn active" style="background: #00d4ff;" data-color="#00d4ff"></button>
+                    <button class="theme-btn" style="background: #7928ca;" data-color="#7928ca"></button>
+                    <button class="theme-btn" style="background: #0070f3;" data-color="#0070f3"></button>
+                    <button class="theme-btn" style="background: #f5a623;" data-color="#f5a623"></button>
+                    <button class="theme-btn" style="background: #10b981;" data-color="#10b981"></button>
+                </div>
+            </div>
+
+            <div class="setting-card">
+                <div>
+                    <h3>Endereço Web Servidor</h3>
+                    <p style="font-size: 12px; color: var(--text-secondary);">Endereço de acesso remoto</p>
+                </div>
+                <span id="manualIp" style="font-family: monospace; color: var(--accent);">https://conexz-app.onrender.com</span>
             </div>
         </div>
 
-        <!-- TAB CONFIGURAÇÕES -->
-        <div class="tab-content" id="tab-settings">
-            <h2><i class="fas fa-cog"></i> Configurações</h2>
-            <div class="setting-card">
-                <div class="info">
-                    <h3><i class="fas fa-moon"></i> Modo Escuro</h3>
-                    <p>Alternar tema da interface</p>
-                </div>
-                <div class="toggle">
-                    <input type="checkbox" id="darkModeToggle" checked>
-                    <label for="darkModeToggle"></label>
-                </div>
-            </div>
-            <div class="setting-card">
-                <div class="info">
-                    <h3><i class="fas fa-trash-alt"></i> Limpar Dados</h3>
-                    <p>Remover todos os arquivos transferidos</p>
-                </div>
-                <button class="btn btn-danger btn-sm" onclick="limparTudo()"><i class="fas fa-trash"></i> Limpar</button>
-            </div>
-        </div>
     </div>
 
-    <!-- MODAL DE QR CODE (GLOBAL) -->
-    <div class="modal" id="qrModal">
+    <!-- MODAL QR CODE -->
+    <div id="qrModal" class="modal">
         <div class="modal-content">
-            <button class="close" onclick="fecharModalQr()">&times;</button>
-            <h2><i class="fas fa-qrcode" style="color:var(--accent);"></i> Conexão Rápida</h2>
-            <p style="color:var(--text-secondary); font-size:14px; margin-bottom:16px;">Acesse por outro dispositivo na mesma rede</p>
-            <div class="qr-container">
-                <img id="modalQrImage" src="" alt="QR Code">
-            </div>
-            <div class="qr-url" id="modalQrUrl">http://--</div>
-            <button class="btn btn-primary" onclick="copiarModalUrl()" style="width:100%;">
-                <i class="fas fa-copy"></i> Copiar Link
+            <button class="close" onclick="fecharQR()">&times;</button>
+            <h2><i class="fas fa-qrcode"></i> Conectar Celular</h2>
+            <div class="qr-container" id="qrContainer"></div>
+            <div class="qr-url" id="qrUrl">https://conexz-app.onrender.com</div>
+            <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="copiarLink()">
+                <i class="fas fa-link"></i> Copiar Link
             </button>
         </div>
     </div>
 
-    <!-- MODAL DE VÍDEO -->
-    <div class="video-modal" id="videoModal">
+    <!-- PLAYER VÍDEO -->
+    <div id="videoModal" class="video-modal">
         <div class="video-modal-content">
-            <button class="video-close" onclick="fecharVideoModal()">&times;</button>
-            <video id="modalVideoPlayer" controls></video>
+            <button class="video-close" onclick="closeVideoPlayer()">&times;</button>
+            <video id="videoPlayer" controls></video>
             <div class="video-actions">
-                <button class="btn btn-primary" id="downloadVideoBtn"><i class="fas fa-download"></i> Baixar Vídeo</button>
+                <button class="btn btn-secondary btn-sm" onclick="baixarVideo()">
+                    <i class="fas fa-download"></i> Baixar
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="compartilharVideo()">
+                    <i class="fas fa-share-alt"></i> Compartilhar
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- PLAYER DE ÁUDIO FLUTUANTE -->
-    <div class="audio-player" id="audioPlayer">
+    <!-- PLAYER ÁUDIO FIXO -->
+    <div id="audioPlayer" class="audio-player">
         <div class="audio-player-content">
             <div class="audio-info">
-                <div class="audio-title" id="audioTitle">Música Tocando</div>
+                <div id="audioTitle" class="audio-title">Título da Música</div>
             </div>
             <div class="audio-controls">
-                <button class="audio-btn" id="audioPlayBtn" onclick="toggleAudioPlay()"><i class="fas fa-play"></i></button>
-                <span class="audio-time" id="audioCurrentTime">0:00</span>
-                <input type="range" class="audio-progress" id="audioProgress" value="0" min="0" max="100">
-                <span class="audio-time" id="audioDuration">0:00</span>
-                <button class="audio-btn audio-close" onclick="fecharAudioPlayer()"><i class="fas fa-times"></i></button>
+                <button id="audioBtn" class="audio-btn" onclick="toggleAudioPlay()">
+                    <i class="fas fa-play"></i>
+                </button>
+                <input type="range" id="audioProgress" class="audio-progress" value="0" min="0" step="0.1">
+                <div class="audio-time">
+                    <span id="audioCurrentTime">0:00</span> / <span id="audioDuration">0:00</span>
+                </div>
+                <button class="audio-btn" onclick="closeAudioPlayer()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         </div>
-        <audio id="globalAudioElement"></audio>
     </div>
 
-    <script>
-        // Seu código JavaScript de controle da aplicação entra aqui
-        function login() { /* Lógica de login */ }
-        function register() { /* Lógica de cadastro */ }
-        function logout() { /* Lógica de logout */ }
-        function showRegister() { document.getElementById('loginForm').style.display='none'; document.getElementById('registerForm').style.display='block'; }
-        function showLogin() { document.getElementById('registerForm').style.display='none'; document.getElementById('loginForm').style.display='block'; }
-        function atualizarStatus() { /* Atualizar dados de status */ }
-        function copiarUrlStatus() { /* Copiar IP */ }
-        function gerarQrCode() { /* Gerar QR Code */ }
-        function fecharModalQr() { document.getElementById('qrModal').classList.remove('active'); }
-        function fecharVideoModal() { document.getElementById('videoModal').classList.remove('active'); }
-        function toggleAudioPlay() { /* Play/Pause áudio */ }
-        function fecharAudioPlayer() { document.getElementById('audioPlayer').style.display='none'; }
-        function limparTudo() { /* Limpar cache/dados */ }
-
-        // Controle de Abas
-        document.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                tab.classList.add('active');
-                const target = document.getElementById('tab-' + tab.getAttribute('data-tab'));
-                if(target) target.classList.add('active');
-            });
-        });
-    </script>
+    <!-- SOCKET.IO E JS DA APLICAÇÃO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
