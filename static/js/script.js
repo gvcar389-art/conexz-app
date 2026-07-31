@@ -1,5 +1,5 @@
 // ==========================================
-// CONEXZ - SCRIPT COMPLETO (COM AUTENTICAÇÃO)
+// CONEXZ - SCRIPT COMPLETO (COM AUTENTICAÇÃO E SALAS PRIVADAS)
 // ==========================================
 
 const socket = io();
@@ -8,6 +8,31 @@ let currentAudio = null;
 let isAudioPlaying = false;
 let currentTheme = '#00d4ff';
 let statusInterval = null;
+
+// ==========================================
+// VERIFICAÇÃO INICIAL DE SESSÃO
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const res = await fetch('/api/auth/user');
+        const data = await res.json();
+        
+        if (data.authenticated) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            if (data.username) {
+                document.getElementById('userNameDisplay').textContent = data.username;
+            }
+            init(data.id);
+        } else {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('mainContent').style.display = 'none';
+        }
+    } catch (e) {
+        console.error('Erro ao verificar autenticação inicial:', e);
+    }
+});
 
 // ==========================================
 // AUTENTICAÇÃO
@@ -42,7 +67,7 @@ async function login() {
                 document.getElementById('userNameDisplay').textContent = data.user.username;
             }
             
-            init();
+            init(data.user.id || email);
         } else {
             status.textContent = '❌ ' + data.error;
             status.className = 'login-status error';
@@ -123,12 +148,36 @@ function showLogin() {
     document.getElementById('registerStatus').className = 'login-status';
 }
 
+function togglePasswordVisibility(inputId, iconId) {
+    const passwordInput = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (!passwordInput) return;
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        if (icon) {
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        }
+    } else {
+        passwordInput.type = 'password';
+        if (icon) {
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+}
+
 // ==========================================
-// INICIALIZAÇÃO
+// INICIALIZAÇÃO E SALAS ISOLADAS
 // ==========================================
 
-async function init() {
+async function init(userId) {
     console.log('🚀 Iniciando ConexZ...');
+    
+    if (userId) {
+        socket.emit('join_device_room', { room_code: userId });
+    }
     
     try {
         const res = await fetch('/api/device');
@@ -160,17 +209,14 @@ async function carregarStatus() {
         const res = await fetch('/api/status-completo');
         const data = await res.json();
         
-        document.getElementById('statusIP').textContent = data.ip || '--';
-        document.getElementById('statusPort').textContent = data.port || '--';
-        document.getElementById('statusTime').textContent = data.hora || '--';
-        document.getElementById('statusDate').textContent = data.data || '--';
-        document.getElementById('statusFiles').textContent = data.arquivos || 0;
-        document.getElementById('statusVideos').textContent = (data.videos || 0) + ' 🎬';
-        document.getElementById('statusMusicas').textContent = (data.musicas || 0) + ' 🎵';
-        document.getElementById('statusImagens').textContent = (data.imagens || 0) + ' 🖼️';
+        document.getElementById('statusFiles').textContent = data.total_files || 0;
         
-        const url = `http://${data.ip || '--'}:${data.port || '--'}`;
-        document.getElementById('statusUrl').textContent = url;
+        if (data.categories) {
+            document.getElementById('statusVideos').textContent = (data.categories.videos || 0) + ' 🎬';
+            document.getElementById('statusMusicas').textContent = (data.categories.musicas || 0) + ' 🎵';
+            document.getElementById('statusImagens').textContent = (data.categories.imagens || 0) + ' 🖼️';
+        }
+        
         document.getElementById('manualIp').textContent = 'https://conexz-app.onrender.com';
         
         const badge = document.getElementById('statusBadge');
@@ -192,14 +238,12 @@ function atualizarStatus() {
 }
 
 function copiarUrlStatus() {
-    const url = document.getElementById('statusUrl').textContent;
-    if (url && url !== '--') {
-        navigator.clipboard.writeText(url).then(() => {
-            mostrarStatus('✅ URL copiada!', 'success');
-        }).catch(() => {
-            prompt('Copie a URL:', url);
-        });
-    }
+    const url = 'https://conexz-app.onrender.com';
+    navigator.clipboard.writeText(url).then(() => {
+        mostrarStatus('✅ URL copiada!', 'success');
+    }).catch(() => {
+        prompt('Copie a URL:', url);
+    });
 }
 
 function iniciarStatusAutomatico() {
@@ -215,30 +259,18 @@ async function detectarIP() {
     try {
         const res = await fetch('/api/device');
         const data = await res.json();
-        
-        const ipDisplay = document.getElementById('ipDisplay');
-        const ipAddress = document.getElementById('ipAddress');
-        const ipPort = document.getElementById('ipPort');
-        
-        ipAddress.textContent = data.ip;
-        ipPort.textContent = data.port;
-        ipDisplay.classList.add('active');
-        
-        mostrarStatus(`📡 IP: ${data.ip}:${data.port}`, 'info');
+        mostrarStatus(`📡 IP Local: ${data.ip}:${data.port}`, 'info');
     } catch(e) {
         mostrarStatus('❌ Erro ao detectar IP', 'error');
     }
 }
 
 function copiarIP() {
-    const ip = document.getElementById('ipAddress').textContent;
-    const port = document.getElementById('ipPort').textContent;
-    const url = `http://${ip}:${port}`;
-    
+    const url = 'https://conexz-app.onrender.com';
     navigator.clipboard.writeText(url).then(() => {
-        mostrarStatus('✅ IP copiado!', 'success');
+        mostrarStatus('✅ Link do Servidor Copiado!', 'success');
     }).catch(() => {
-        prompt('Copie o IP:', url);
+        prompt('Copie o Link:', url);
     });
 }
 
@@ -259,7 +291,7 @@ async function gerarQRCodeConexao() {
         if (data.qr) {
             img.src = `data:image/png;base64,${data.qr}`;
             img.style.display = 'block';
-            status.textContent = '📷 Escaneie com a câmera do celular';
+            status.textContent = '📷 Escaneie para emparelhar seus aparelhos';
             status.style.color = 'var(--accent)';
             
             linkText.textContent = data.url;
@@ -267,9 +299,10 @@ async function gerarQRCodeConexao() {
             
             document.getElementById('manualIp').textContent = data.url;
             
-            document.getElementById('gerarQRBtn').innerHTML = '<i class="fas fa-sync"></i> Atualizar QR Code';
+            const btn = document.getElementById('gerarQRBtn');
+            if (btn) btn.innerHTML = '<i class="fas fa-sync"></i> Atualizar QR Code';
             
-            mostrarStatus('✅ QR Code gerado! Escaneie com o celular', 'success');
+            mostrarStatus('✅ QR Code gerado!', 'success');
         }
     } catch(e) {
         console.error('Erro:', e);
@@ -315,104 +348,54 @@ function setupEvents() {
     const fileInput = document.getElementById('fileInput');
     
     if (dropZone) {
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-        dropZone.addEventListener('drop', (e) => {
+        dropZone.onclick = () => fileInput.click();
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+        dropZone.ondrop = (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length > 0) {
-                uploadFiles(e.dataTransfer.files);
-            }
-        });
+            if (e.dataTransfer.files.length > 0) uploadFiles(e.dataTransfer.files);
+        };
     }
     
     if (fileInput) {
-        fileInput.addEventListener('change', () => {
+        fileInput.onchange = () => {
             if (fileInput.files.length > 0) {
                 uploadFiles(fileInput.files);
                 fileInput.value = '';
             }
-        });
+        };
     }
     
-    document.getElementById('qrBtn').addEventListener('click', gerarQR);
-    document.getElementById('ipBtn').addEventListener('click', detectarIP);
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-        loadFiles();
-        loadVideos();
-        loadMusic();
-        loadImages();
-        carregarStatus();
-    });
+    const qrBtn = document.getElementById('qrBtn');
+    if (qrBtn) qrBtn.onclick = gerarQR;
     
-    document.getElementById('searchInput').addEventListener('input', filterFiles);
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            loadFiles();
+            loadVideos();
+            loadMusic();
+            loadImages();
+            carregarStatus();
+        };
+    }
     
-    document.getElementById('darkMode').addEventListener('change', function() {
-        if (this.checked) {
-            document.documentElement.style.setProperty('--bg-primary', '#f0f4f8');
-            document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
-            document.documentElement.style.setProperty('--bg-card', '#e8edf3');
-            document.documentElement.style.setProperty('--bg-hover', '#dce3ea');
-            document.documentElement.style.setProperty('--text-primary', '#1a202c');
-            document.documentElement.style.setProperty('--text-secondary', '#4a5568');
-            document.documentElement.style.setProperty('--text-muted', '#718096');
-            document.documentElement.style.setProperty('--border', '#cbd5e0');
-        } else {
-            document.documentElement.style.setProperty('--bg-primary', '#0a0a1a');
-            document.documentElement.style.setProperty('--bg-secondary', '#12122a');
-            document.documentElement.style.setProperty('--bg-card', '#1a1a3e');
-            document.documentElement.style.setProperty('--bg-hover', '#252550');
-            document.documentElement.style.setProperty('--text-primary', '#ffffff');
-            document.documentElement.style.setProperty('--text-secondary', '#a0aec0');
-            document.documentElement.style.setProperty('--text-muted', '#6a7a8e');
-            document.documentElement.style.setProperty('--border', '#2a2a5a');
-        }
-    });
-    
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            const color = this.dataset.color;
-            currentTheme = color;
-            document.documentElement.style.setProperty('--accent', color);
-            
-            document.querySelectorAll('.btn-primary').forEach(b => {
-                b.style.background = color;
-            });
-            document.querySelectorAll('.tab.active').forEach(t => {
-                t.style.background = color;
-                t.style.borderColor = color;
-            });
-            document.querySelectorAll('.badge').forEach(b => {
-                b.style.background = color;
-            });
-            document.querySelectorAll('.logo-icon').forEach(l => {
-                l.style.background = color;
-            });
-        });
-    });
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.oninput = filterFiles;
     
     socket.on('connect', () => {
         console.log('🔌 Conectado ao servidor');
-        mostrarStatus('Conectado ao servidor', 'success');
     });
     
     socket.on('new_file', (data) => {
-        console.log(`📄 Novo arquivo: ${data.name}`);
+        console.log(`📄 Arquivo atualizado: ${data.name}`);
         loadFiles();
         loadVideos();
         loadMusic();
         loadImages();
         carregarStatus();
-        mostrarStatus(`📄 ${data.name} recebido!`, 'success');
+        mostrarStatus(`📄 ${data.name} recebido com segurança!`, 'success');
     });
     
     socket.on('file_deleted', () => {
@@ -425,27 +408,10 @@ function setupEvents() {
     
     const progress = document.getElementById('audioProgress');
     if (progress) {
-        progress.addEventListener('input', function() {
-            if (currentAudio) {
-                currentAudio.currentTime = parseFloat(this.value);
-            }
-        });
+        progress.oninput = function() {
+            if (currentAudio) currentAudio.currentTime = parseFloat(this.value);
+        };
     }
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeVideoPlayer();
-            fecharQR();
-            closeAudioPlayer();
-        }
-    });
-    
-    document.getElementById('videoModal').addEventListener('click', function(e) {
-        if (e.target === this) closeVideoPlayer();
-    });
-    document.getElementById('qrModal').addEventListener('click', function(e) {
-        if (e.target === this) fecharQR();
-    });
 }
 
 // ==========================================
@@ -464,9 +430,9 @@ async function uploadFiles(files) {
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
     
-    progressBar.style.display = 'flex';
-    progressFill.style.width = '0%';
-    progressText.textContent = '0%';
+    if (progressBar) progressBar.style.display = 'flex';
+    if (progressFill) progressFill.style.width = '0%';
+    if (progressText) progressText.textContent = '0%';
     
     mostrarStatus('⏳ Enviando...', 'info');
     
@@ -474,7 +440,7 @@ async function uploadFiles(files) {
     xhr.open('POST', '/api/upload');
     
     xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
+        if (e.lengthComputable && progressFill && progressText) {
             const percent = Math.round((e.loaded / e.total) * 100);
             progressFill.style.width = percent + '%';
             progressText.textContent = percent + '%';
@@ -482,7 +448,7 @@ async function uploadFiles(files) {
     };
     
     xhr.onload = () => {
-        progressBar.style.display = 'none';
+        if (progressBar) progressBar.style.display = 'none';
         if (xhr.status === 200) {
             mostrarStatus('✅ Arquivo enviado com sucesso!', 'success');
             loadFiles();
@@ -496,7 +462,7 @@ async function uploadFiles(files) {
     };
     
     xhr.onerror = () => {
-        progressBar.style.display = 'none';
+        if (progressBar) progressBar.style.display = 'none';
         mostrarStatus('❌ Erro de conexão', 'error');
     };
     
@@ -512,10 +478,10 @@ async function loadFiles() {
         const res = await fetch('/api/files');
         const files = await res.json();
         renderFiles(files);
-        document.getElementById('fileCount').textContent = files.length;
+        const countEl = document.getElementById('fileCount');
+        if (countEl) countEl.textContent = files.length;
     } catch (error) {
         console.error('❌ Erro ao carregar arquivos:', error);
-        mostrarStatus('Erro ao carregar arquivos', 'error');
     }
 }
 
@@ -523,7 +489,7 @@ function renderFiles(files) {
     const container = document.getElementById('fileList');
     if (!container) return;
     
-    if (files.length === 0) {
+    if (!Array.isArray(files) || files.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-inbox fa-4x"></i>
@@ -570,7 +536,7 @@ function filterFiles() {
 }
 
 // ==========================================
-// VÍDEOS
+// VÍDEOS / MÚSICAS / IMAGENS
 // ==========================================
 
 async function loadVideos() {
@@ -580,30 +546,20 @@ async function loadVideos() {
         const videos = files.filter(f => f.name.match(/\.(mp4|webm|mov|mkv|avi)$/i));
         renderVideos(videos);
     } catch (error) {
-        console.error('❌ Erro ao carregar vídeos:', error);
+        console.error('Erro ao carregar vídeos:', error);
     }
 }
 
 function renderVideos(videos) {
     const grid = document.getElementById('videoGrid');
     if (!grid) return;
-    
     if (videos.length === 0) {
-        grid.innerHTML = `
-            <div class="empty-state" style="grid-column:1/-1;">
-                <i class="fas fa-play-circle fa-4x"></i>
-                <h3>Nenhum vídeo</h3>
-                <p>Envie um vídeo MP4 para assistir</p>
-            </div>
-        `;
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-play-circle fa-4x"></i><h3>Nenhum vídeo enviado</h3></div>`;
         return;
     }
-    
     grid.innerHTML = videos.map(v => `
         <div class="media-card" onclick="playVideo('${v.id}')">
-            <video>
-                <source src="/api/view/${v.id}" type="video/mp4">
-            </video>
+            <video><source src="/api/view/${v.id}" type="video/mp4"></video>
             <div class="media-info">
                 <div class="media-title">${v.name}</div>
                 <div class="media-meta">${v.size_formatted}</div>
@@ -616,7 +572,6 @@ function playVideo(fileId) {
     currentVideoId = fileId;
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('videoPlayer');
-    
     player.src = `/api/view/${fileId}`;
     player.load();
     modal.classList.add('active');
@@ -631,18 +586,6 @@ function closeVideoPlayer() {
     modal.classList.remove('active');
 }
 
-function baixarVideo() {
-    if (currentVideoId) baixarArquivo(currentVideoId);
-}
-
-function compartilharVideo() {
-    if (currentVideoId) compartilharArquivo(currentVideoId);
-}
-
-// ==========================================
-// MÚSICAS
-// ==========================================
-
 async function loadMusic() {
     try {
         const res = await fetch('/api/files');
@@ -650,30 +593,20 @@ async function loadMusic() {
         const music = files.filter(f => f.name.match(/\.(mp3|wav|ogg|flac|m4a)$/i));
         renderMusic(music);
     } catch (error) {
-        console.error('❌ Erro ao carregar músicas:', error);
+        console.error('Erro ao carregar músicas:', error);
     }
 }
 
 function renderMusic(music) {
     const grid = document.getElementById('musicGrid');
     if (!grid) return;
-    
     if (music.length === 0) {
-        grid.innerHTML = `
-            <div class="empty-state" style="grid-column:1/-1;">
-                <i class="fas fa-music fa-4x"></i>
-                <h3>Nenhuma música</h3>
-                <p>Envie uma música MP3 para ouvir</p>
-            </div>
-        `;
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-music fa-4x"></i><h3>Nenhuma música enviada</h3></div>`;
         return;
     }
-    
     grid.innerHTML = music.map(m => `
         <div class="media-card" onclick="playAudio('${m.id}')">
-            <div class="media-preview">
-                <i class="fas fa-music"></i>
-            </div>
+            <div class="media-preview"><i class="fas fa-music"></i></div>
             <div class="media-info">
                 <div class="media-title">${m.name}</div>
                 <div class="media-meta">${m.size_formatted}</div>
@@ -683,81 +616,24 @@ function renderMusic(music) {
 }
 
 function playAudio(fileId) {
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-    }
-    
-    fetch('/api/files')
-        .then(res => res.json())
-        .then(files => {
-            const file = files.find(f => f.id === fileId);
-            if (file) {
-                document.getElementById('audioTitle').textContent = '🎵 ' + file.name;
-            }
-        });
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
     
     currentAudio = new Audio(`/api/view/${fileId}`);
+    currentAudio.play();
+    isAudioPlaying = true;
     
-    currentAudio.addEventListener('loadedmetadata', () => {
-        document.getElementById('audioDuration').textContent = formatTempo(currentAudio.duration);
-        document.getElementById('audioProgress').max = currentAudio.duration;
-    });
-    
-    currentAudio.addEventListener('timeupdate', () => {
-        document.getElementById('audioCurrentTime').textContent = formatTempo(currentAudio.currentTime);
-        document.getElementById('audioProgress').value = currentAudio.currentTime;
-    });
-    
-    currentAudio.addEventListener('ended', closeAudioPlayer);
-    currentAudio.addEventListener('error', () => {
-        mostrarStatus('❌ Erro ao tocar música', 'error');
-    });
-    
-    document.getElementById('audioPlayer').style.display = 'block';
-    
-    currentAudio.play()
-        .then(() => {
-            isAudioPlaying = true;
-            updateAudioButton();
-        })
-        .catch(() => {
-            mostrarStatus('❌ Erro ao tocar música', 'error');
-        });
-}
-
-function toggleAudioPlay() {
-    if (!currentAudio) return;
-    
-    if (isAudioPlaying) {
-        currentAudio.pause();
-    } else {
-        currentAudio.play();
-    }
-    isAudioPlaying = !isAudioPlaying;
-    updateAudioButton();
-}
-
-function updateAudioButton() {
-    const btn = document.getElementById('audioBtn');
-    if (!btn) return;
-    btn.innerHTML = isAudioPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+    const playerContainer = document.getElementById('audioPlayer');
+    if (playerContainer) playerContainer.style.display = 'block';
 }
 
 function closeAudioPlayer() {
     if (currentAudio) {
         currentAudio.pause();
-        currentAudio.src = '';
         currentAudio = null;
     }
-    document.getElementById('audioPlayer').style.display = 'none';
-    isAudioPlaying = false;
-    updateAudioButton();
+    const playerContainer = document.getElementById('audioPlayer');
+    if (playerContainer) playerContainer.style.display = 'none';
 }
-
-// ==========================================
-// IMAGENS
-// ==========================================
 
 async function loadImages() {
     try {
@@ -766,30 +642,20 @@ async function loadImages() {
         const images = files.filter(f => f.name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i));
         renderImages(images);
     } catch (error) {
-        console.error('❌ Erro ao carregar imagens:', error);
+        console.error('Erro ao carregar imagens:', error);
     }
 }
 
 function renderImages(images) {
     const grid = document.getElementById('imageGrid');
     if (!grid) return;
-    
     if (images.length === 0) {
-        grid.innerHTML = `
-            <div class="empty-state" style="grid-column:1/-1;">
-                <i class="fas fa-images fa-4x"></i>
-                <h3>Nenhuma imagem</h3>
-                <p>Envie uma imagem para visualizar</p>
-            </div>
-        `;
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-images fa-4x"></i><h3>Nenhuma imagem enviada</h3></div>`;
         return;
     }
-    
     grid.innerHTML = images.map(img => `
         <div class="media-card" onclick="visualizarArquivo('${img.id}')">
-            <div class="media-preview">
-                <i class="fas fa-image" style="font-size:40px;"></i>
-            </div>
+            <div class="media-preview"><i class="fas fa-image" style="font-size:40px;"></i></div>
             <div class="media-info">
                 <div class="media-title">${img.name}</div>
                 <div class="media-meta">${img.size_formatted}</div>
@@ -799,39 +665,7 @@ function renderImages(images) {
 }
 
 // ==========================================
-// QR CODE (MODAL)
-// ==========================================
-
-async function gerarQR() {
-    const modal = document.getElementById('qrModal');
-    const container = document.getElementById('qrContainer');
-    const urlEl = document.getElementById('qrUrl');
-    modal.classList.add('active');
-    container.innerHTML = '<p style="color:var(--text-secondary);">⏳ Gerando...</p>';
-    
-    try {
-        const res = await fetch('/api/qr');
-        const data = await res.json();
-        container.innerHTML = `<img src="data:image/png;base64,${data.qr}">`;
-        urlEl.textContent = data.url || 'https://conexz-app.onrender.com';
-    } catch(e) {
-        container.innerHTML = '<p style="color:#e53e3e;">❌ Erro ao gerar QR Code</p>';
-        urlEl.textContent = 'https://conexz-app.onrender.com';
-    }
-}
-
-function fecharQR() {
-    document.getElementById('qrModal').classList.remove('active');
-}
-
-async function copiarLink() {
-    const url = document.getElementById('qrUrl').textContent;
-    await navigator.clipboard.writeText(url);
-    mostrarStatus('✅ Link copiado!', 'success');
-}
-
-// ==========================================
-// FUNÇÕES COMPARTILHADAS
+// FUNÇÕES COMPARTILHADAS DE ARQUIVOS
 // ==========================================
 
 function visualizarArquivo(id) {
@@ -845,11 +679,11 @@ function baixarArquivo(id) {
 
 async function compartilharArquivo(id) {
     try {
-        const res = await fetch(`/api/share/${id}`);
+        const res = await fetch(`/api/share-link/${id}`);
         const data = await res.json();
         await navigator.clipboard.writeText(data.link);
-        mostrarStatus('✅ Link copiado!', 'success');
-        alert(`Link compartilhável:\n${data.link}\n\nVálido por 24 horas`);
+        mostrarStatus('✅ Link seguro copiado!', 'success');
+        alert(`Link compartilhável (válido por 24h):\n${data.link}`);
     } catch(e) {
         mostrarStatus('❌ Erro ao compartilhar', 'error');
     }
@@ -884,13 +718,6 @@ function getIcon(name) {
     return 'fas fa-file';
 }
 
-function formatTempo(segundos) {
-    if (!segundos || isNaN(segundos)) return '0:00';
-    const m = Math.floor(segundos / 60);
-    const s = Math.floor(segundos % 60);
-    return m + ':' + (s < 10 ? '0' : '') + s;
-}
-
 function mostrarStatus(msg, tipo) {
     const el = document.getElementById('status');
     if (!el) return;
@@ -902,23 +729,17 @@ function mostrarStatus(msg, tipo) {
 }
 
 // ==========================================
-// EXPORTAR FUNÇÕES
+// EXPORTAÇÃO GLOBAL
 // ==========================================
 
 window.playVideo = playVideo;
 window.closeVideoPlayer = closeVideoPlayer;
-window.baixarVideo = baixarVideo;
-window.compartilharVideo = compartilharVideo;
 window.playAudio = playAudio;
-window.toggleAudioPlay = toggleAudioPlay;
 window.closeAudioPlayer = closeAudioPlayer;
 window.visualizarArquivo = visualizarArquivo;
 window.baixarArquivo = baixarArquivo;
 window.compartilharArquivo = compartilharArquivo;
 window.deletarArquivo = deletarArquivo;
-window.gerarQR = gerarQR;
-window.fecharQR = fecharQR;
-window.copiarLink = copiarLink;
 window.detectarIP = detectarIP;
 window.copiarIP = copiarIP;
 window.atualizarStatus = atualizarStatus;
@@ -930,13 +751,10 @@ window.register = register;
 window.logout = logout;
 window.showRegister = showRegister;
 window.showLogin = showLogin;
-
-// ==========================================
-// SERVICE WORKER
-// ==========================================
+window.togglePasswordVisibility = togglePasswordVisibility;
 
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('✅ Service Worker registrado com sucesso'))
-        .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
+        .then(() => console.log('✅ Service Worker registrado'))
+        .catch(err => console.error('❌ Erro no SW:', err));
 }
