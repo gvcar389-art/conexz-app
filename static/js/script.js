@@ -1,5 +1,5 @@
 // ==========================================
-// CONEXZ - SCRIPT COMPLETO
+// CONEXZ - SCRIPT COMPLETO (COM AUTENTICAÇÃO)
 // ==========================================
 
 const socket = io();
@@ -10,34 +10,25 @@ let currentTheme = '#00d4ff';
 let statusInterval = null;
 
 // ==========================================
-// AUTENTICAÇÃO E SESSÃO
+// UTILITÁRIOS
 // ==========================================
 
-// Verifica se o usuário já está logado ao carregar a página
-async function checkSession() {
-    try {
-        const res = await fetch('/api/auth/me');
-        const data = await res.json();
-
-        if (data.authenticated) {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-
-            if (data.user && data.user.username) {
-                document.getElementById('userNameDisplay').textContent = data.user.username;
-            }
-
-            await init();
-        } else {
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('mainContent').style.display = 'none';
-        }
-    } catch (e) {
-        console.error('❌ Erro ao verificar sessão:', e);
-        document.getElementById('loginScreen').style.display = 'flex';
-        document.getElementById('mainContent').style.display = 'none';
+function togglePassword(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
     }
 }
+
+// ==========================================
+// AUTENTICAÇÃO
+// ==========================================
 
 async function login() {
     const email = document.getElementById('loginEmail').value;
@@ -241,31 +232,10 @@ async function detectarIP() {
     try {
         const res = await fetch('/api/device');
         const data = await res.json();
-        
-        const ipDisplay = document.getElementById('ipDisplay');
-        const ipAddress = document.getElementById('ipAddress');
-        const ipPort = document.getElementById('ipPort');
-        
-        ipAddress.textContent = data.ip;
-        ipPort.textContent = data.port;
-        ipDisplay.classList.add('active');
-        
         mostrarStatus(`📡 IP: ${data.ip}:${data.port}`, 'info');
     } catch(e) {
         mostrarStatus('❌ Erro ao detectar IP', 'error');
     }
-}
-
-function copiarIP() {
-    const ip = document.getElementById('ipAddress').textContent;
-    const port = document.getElementById('ipPort').textContent;
-    const url = `http://${ip}:${port}`;
-    
-    navigator.clipboard.writeText(url).then(() => {
-        mostrarStatus('✅ IP copiado!', 'success');
-    }).catch(() => {
-        prompt('Copie o IP:', url);
-    });
 }
 
 // ==========================================
@@ -292,6 +262,7 @@ async function gerarQRCodeConexao() {
             linkDisplay.style.display = 'block';
             
             document.getElementById('manualIp').textContent = data.url;
+            
             document.getElementById('gerarQRBtn').innerHTML = '<i class="fas fa-sync"></i> Atualizar QR Code';
             
             mostrarStatus('✅ QR Code gerado! Escaneie com o celular', 'success');
@@ -366,9 +337,9 @@ function setupEvents() {
         });
     }
     
-    document.getElementById('qrBtn')?.addEventListener('click', gerarQR);
-    document.getElementById('ipBtn')?.addEventListener('click', detectarIP);
-    document.getElementById('refreshBtn')?.addEventListener('click', () => {
+    document.getElementById('qrBtn').addEventListener('click', gerarQR);
+    document.getElementById('ipBtn').addEventListener('click', detectarIP);
+    document.getElementById('refreshBtn').addEventListener('click', () => {
         loadFiles();
         loadVideos();
         loadMusic();
@@ -376,19 +347,10 @@ function setupEvents() {
         carregarStatus();
     });
     
-    document.getElementById('searchInput')?.addEventListener('input', filterFiles);
+    document.getElementById('searchInput').addEventListener('input', filterFiles);
     
-    document.getElementById('darkMode')?.addEventListener('change', function() {
+    document.getElementById('darkMode').addEventListener('change', function() {
         if (this.checked) {
-            document.documentElement.style.setProperty('--bg-primary', '#0a0a1a');
-            document.documentElement.style.setProperty('--bg-secondary', '#12122a');
-            document.documentElement.style.setProperty('--bg-card', '#1a1a3e');
-            document.documentElement.style.setProperty('--bg-hover', '#252550');
-            document.documentElement.style.setProperty('--text-primary', '#ffffff');
-            document.documentElement.style.setProperty('--text-secondary', '#a0aec0');
-            document.documentElement.style.setProperty('--text-muted', '#6a7a8e');
-            document.documentElement.style.setProperty('--border', '#2a2a5a');
-        } else {
             document.documentElement.style.setProperty('--bg-primary', '#f0f4f8');
             document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
             document.documentElement.style.setProperty('--bg-card', '#e8edf3');
@@ -397,6 +359,15 @@ function setupEvents() {
             document.documentElement.style.setProperty('--text-secondary', '#4a5568');
             document.documentElement.style.setProperty('--text-muted', '#718096');
             document.documentElement.style.setProperty('--border', '#cbd5e0');
+        } else {
+            document.documentElement.style.setProperty('--bg-primary', '#0a0a1a');
+            document.documentElement.style.setProperty('--bg-secondary', '#12122a');
+            document.documentElement.style.setProperty('--bg-card', '#1a1a3e');
+            document.documentElement.style.setProperty('--bg-hover', '#252550');
+            document.documentElement.style.setProperty('--text-primary', '#ffffff');
+            document.documentElement.style.setProperty('--text-secondary', '#a0aec0');
+            document.documentElement.style.setProperty('--text-muted', '#6a7a8e');
+            document.documentElement.style.setProperty('--border', '#2a2a5a');
         }
     });
     
@@ -446,7 +417,6 @@ function setupEvents() {
         loadMusic();
         loadImages();
         carregarStatus();
-        mostrarStatus('🗑️ Arquivo removido', 'info');
     });
     
     const progress = document.getElementById('audioProgress');
@@ -466,10 +436,10 @@ function setupEvents() {
         }
     });
     
-    document.getElementById('videoModal')?.addEventListener('click', function(e) {
+    document.getElementById('videoModal').addEventListener('click', function(e) {
         if (e.target === this) closeVideoPlayer();
     });
-    document.getElementById('qrModal')?.addEventListener('click', function(e) {
+    document.getElementById('qrModal').addEventListener('click', function(e) {
         if (e.target === this) fecharQR();
     });
 }
@@ -490,9 +460,9 @@ async function uploadFiles(files) {
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
     
-    if (progressBar) progressBar.style.display = 'flex';
-    if (progressFill) progressFill.style.width = '0%';
-    if (progressText) progressText.textContent = '0%';
+    progressBar.style.display = 'flex';
+    progressFill.style.width = '0%';
+    progressText.textContent = '0%';
     
     mostrarStatus('⏳ Enviando...', 'info');
     
@@ -502,13 +472,13 @@ async function uploadFiles(files) {
     xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
             const percent = Math.round((e.loaded / e.total) * 100);
-            if (progressFill) progressFill.style.width = percent + '%';
-            if (progressText) progressText.textContent = percent + '%';
+            progressFill.style.width = percent + '%';
+            progressText.textContent = percent + '%';
         }
     };
     
     xhr.onload = () => {
-        if (progressBar) progressBar.style.display = 'none';
+        progressBar.style.display = 'none';
         if (xhr.status === 200) {
             mostrarStatus('✅ Arquivo enviado com sucesso!', 'success');
             loadFiles();
@@ -522,7 +492,7 @@ async function uploadFiles(files) {
     };
     
     xhr.onerror = () => {
-        if (progressBar) progressBar.style.display = 'none';
+        progressBar.style.display = 'none';
         mostrarStatus('❌ Erro de conexão', 'error');
     };
     
@@ -538,8 +508,7 @@ async function loadFiles() {
         const res = await fetch('/api/files');
         const files = await res.json();
         renderFiles(files);
-        const countEl = document.getElementById('fileCount');
-        if (countEl) countEl.textContent = files.length;
+        document.getElementById('fileCount').textContent = files.length;
     } catch (error) {
         console.error('❌ Erro ao carregar arquivos:', error);
         mostrarStatus('Erro ao carregar arquivos', 'error');
@@ -628,7 +597,7 @@ function renderVideos(videos) {
     
     grid.innerHTML = videos.map(v => `
         <div class="media-card" onclick="playVideo('${v.id}')">
-            <video preload="metadata">
+            <video>
                 <source src="/api/view/${v.id}" type="video/mp4">
             </video>
             <div class="media-info">
@@ -653,11 +622,9 @@ function playVideo(fileId) {
 function closeVideoPlayer() {
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('videoPlayer');
-    if (player) {
-        player.pause();
-        player.src = '';
-    }
-    if (modal) modal.classList.remove('active');
+    player.pause();
+    player.src = '';
+    modal.classList.remove('active');
 }
 
 function baixarVideo() {
@@ -714,25 +681,9 @@ function renderMusic(music) {
 function playAudio(fileId) {
     if (currentAudio) {
         currentAudio.pause();
-    } else {
-        currentAudio = new Audio();
-        
-        currentAudio.addEventListener('loadedmetadata', () => {
-            document.getElementById('audioDuration').textContent = formatTempo(currentAudio.duration);
-            document.getElementById('audioProgress').max = currentAudio.duration;
-        });
-        
-        currentAudio.addEventListener('timeupdate', () => {
-            document.getElementById('audioCurrentTime').textContent = formatTempo(currentAudio.currentTime);
-            document.getElementById('audioProgress').value = currentAudio.currentTime;
-        });
-        
-        currentAudio.addEventListener('ended', closeAudioPlayer);
-        currentAudio.addEventListener('error', () => {
-            mostrarStatus('❌ Erro ao tocar música', 'error');
-        });
+        currentAudio = null;
     }
-
+    
     fetch('/api/files')
         .then(res => res.json())
         .then(files => {
@@ -741,8 +692,24 @@ function playAudio(fileId) {
                 document.getElementById('audioTitle').textContent = '🎵 ' + file.name;
             }
         });
-
-    currentAudio.src = `/api/view/${fileId}`;
+    
+    currentAudio = new Audio(`/api/view/${fileId}`);
+    
+    currentAudio.addEventListener('loadedmetadata', () => {
+        document.getElementById('audioDuration').textContent = formatTempo(currentAudio.duration);
+        document.getElementById('audioProgress').max = currentAudio.duration;
+    });
+    
+    currentAudio.addEventListener('timeupdate', () => {
+        document.getElementById('audioCurrentTime').textContent = formatTempo(currentAudio.currentTime);
+        document.getElementById('audioProgress').value = currentAudio.currentTime;
+    });
+    
+    currentAudio.addEventListener('ended', closeAudioPlayer);
+    currentAudio.addEventListener('error', () => {
+        mostrarStatus('❌ Erro ao tocar música', 'error');
+    });
+    
     document.getElementById('audioPlayer').style.display = 'block';
     
     currentAudio.play()
@@ -777,6 +744,7 @@ function closeAudioPlayer() {
     if (currentAudio) {
         currentAudio.pause();
         currentAudio.src = '';
+        currentAudio = null;
     }
     document.getElementById('audioPlayer').style.display = 'none';
     isAudioPlaying = false;
@@ -815,8 +783,8 @@ function renderImages(images) {
     
     grid.innerHTML = images.map(img => `
         <div class="media-card" onclick="visualizarArquivo('${img.id}')">
-            <div class="media-preview" style="height:140px; overflow:hidden;">
-                <img src="/api/view/${img.id}" alt="${img.name}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">
+            <div class="media-preview">
+                <i class="fas fa-image" style="font-size:40px;"></i>
             </div>
             <div class="media-info">
                 <div class="media-title">${img.name}</div>
@@ -900,6 +868,29 @@ async function deletarArquivo(id) {
 }
 
 // ==========================================
+// TEMAS
+// ==========================================
+
+function mudarTema(cor, btn) {
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.documentElement.style.setProperty('--accent', cor);
+    document.querySelectorAll('.btn-primary').forEach(b => {
+        b.style.background = cor;
+    });
+    document.querySelectorAll('.tab.active').forEach(t => {
+        t.style.background = cor;
+        t.style.borderColor = cor;
+    });
+    document.querySelectorAll('.badge').forEach(b => {
+        b.style.background = cor;
+    });
+    document.querySelectorAll('.logo-icon').forEach(l => {
+        l.style.background = cor;
+    });
+}
+
+// ==========================================
 // UTILITÁRIOS
 // ==========================================
 
@@ -930,7 +921,7 @@ function mostrarStatus(msg, tipo) {
 }
 
 // ==========================================
-// EXPORTAR FUNÇÕES PARA O HTML
+// EXPORTAR FUNÇÕES
 // ==========================================
 
 window.playVideo = playVideo;
@@ -948,11 +939,12 @@ window.gerarQR = gerarQR;
 window.fecharQR = fecharQR;
 window.copiarLink = copiarLink;
 window.detectarIP = detectarIP;
-window.copiarIP = copiarIP;
 window.atualizarStatus = atualizarStatus;
 window.copiarUrlStatus = copiarUrlStatus;
 window.gerarQRCodeConexao = gerarQRCodeConexao;
 window.copiarLinkConexao = copiarLinkConexao;
+window.mudarTema = mudarTema;
+window.togglePassword = togglePassword;
 window.login = login;
 window.register = register;
 window.logout = logout;
@@ -960,17 +952,36 @@ window.showRegister = showRegister;
 window.showLogin = showLogin;
 
 // ==========================================
-// INICIALIZAÇÃO DA PÁGINA
-// ==========================================
-
-document.addEventListener('DOMContentLoaded', checkSession);
-
-// ==========================================
 // SERVICE WORKER
 // ==========================================
 
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('✅ Service Worker registrado com sucesso'))
-        .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
+        .then(() => console.log('✅ Service Worker registrado!'))
+        .catch(err => console.log('❌ Service Worker erro:', err));
 }
+
+// ==========================================
+// INICIAR
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se o usuário já está logado
+    fetch('/api/auth/check')
+        .then(res => res.json())
+        .then(data => {
+            if (data.authenticated) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                init();
+            }
+        })
+        .catch(() => {
+            // Se não estiver logado, mostra a tela de login
+            document.getElementById('loginScreen').style.display = 'flex';
+        });
+});
+
+window.addEventListener('beforeunload', function() {
+    if (statusInterval) clearInterval(statusInterval);
+});
