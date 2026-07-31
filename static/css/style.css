@@ -1,716 +1,623 @@
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, session
-from flask_socketio import SocketIO, emit, join_room, leave_room
-from flask_cors import CORS
-from werkzeug.security import generate_password_hash, check_password_hash
-import qrcode
-import io
-import base64
-import os
-import hashlib
-import time
-import socket
-import secrets
-import json
-from datetime import datetime, timedelta
-import glob
-from supabase import create_client, Client
-from dotenv import load_dotenv
+/* ==========================================
+   CONEXZ - ESTILOS COMPLETOS (COM LOGIN, SALAS E SHOW PASSWORD)
+   ========================================== */
 
-# Carregar variáveis de ambiente
-load_dotenv()
+:root {
+    --bg-primary: #0a0a1a;
+    --bg-secondary: #12122a;
+    --bg-card: #1a1a3e;
+    --bg-hover: #252550;
+    --text-primary: #ffffff;
+    --text-secondary: #a0aec0;
+    --text-muted: #6a7a8e;
+    --accent: #00d4ff;
+    --accent-dark: #0099cc;
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --border: #2a2a5a;
+    --radius: 16px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'conexz-secret-key-change-in-production')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-# ==========================================
-# CONFIGURAR SUPABASE
-# ==========================================
+body {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
 
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 10px;
+}
 
-supabase = None
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
-        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ Conectado ao Supabase!")
-    except Exception as e:
-        print(f"❌ Erro ao conectar Supabase: {e}")
-else:
-    print("⚠️ Supabase não configurado! Usando banco de dados em memória local.")
+/* ==========================================
+   TELA DE LOGIN E AUTENTICAÇÃO
+   ========================================== */
 
-# ==========================================
-# CONFIGURAÇÕES
-# ==========================================
+.login-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(20px);
+}
 
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB
+.login-container {
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    text-align: center;
+}
 
-# Banco de dados local (fallback em memória)
-db = {'files': {}, 'shared_links': {}, 'users': {}, 'rooms': {}}
-device_id = secrets.token_hex(8)
+.login-logo {
+    margin-bottom: 32px;
+}
 
-def get_local_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception:
-        return "127.0.0.1"
+.login-logo i {
+    font-size: 56px;
+    color: var(--accent);
+    margin-bottom: 12px;
+}
 
-def format_size(bytes_num):
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if bytes_num < 1024:
-            return f"{bytes_num:.1f} {unit}"
-        bytes_num /= 1024
-    return f"{bytes_num:.1f} TB"
+.login-logo h1 {
+    font-size: 32px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
 
-# ==========================================
-# ROTAS DO PWA
-# ==========================================
+.login-logo p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: 4px;
+}
 
-@app.route('/manifest.json')
-def serve_manifest():
-    return send_from_directory('static', 'manifest.json')
+.login-container h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+}
 
-@app.route('/sw.js')
-def serve_sw():
-    return send_from_directory('static', 'sw.js')
+/* Grupo de Input com suporte para Mostrar/Ocultar Senha */
+.password-group {
+    position: relative;
+    width: 100%;
+    margin-bottom: 12px;
+}
 
-# ==========================================
-# WEBSOCKETS (COM ISOLAMENTO POR SALA E USUÁRIO)
-# ==========================================
+.password-group input {
+    margin-bottom: 0 !important;
+    padding-right: 45px;
+}
 
-@socketio.on('connect')
-def handle_connect():
-    user_id = session.get('user_id', 'anonymous')
-    join_room(user_id)
-    emit('connected', {'status': 'Conectado com sucesso', 'user_id': user_id})
+.toggle-password {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    transition: var(--transition);
+}
 
-@socketio.on('join_device_room')
-def handle_join_room(data):
-    room = data.get('room_code')
-    if room:
-        join_room(room)
-        emit('room_joined', {'room': room, 'message': f'Entrou na sala {room}'}, room=room)
+.toggle-password:hover {
+    color: var(--accent);
+}
 
-@socketio.on('leave_device_room')
-def handle_leave_room(data):
-    room = data.get('room_code')
-    if room:
-        leave_room(room)
-        emit('room_left', {'room': room, 'message': f'Saiu da sala {room}'}, room=room)
+.login-container input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: inherit;
+    transition: var(--transition);
+    margin-bottom: 12px;
+}
 
-# ==========================================
-# AUTENTICAÇÃO
-# ==========================================
+.login-container input:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+}
 
-@app.route('/api/auth/register', methods=['POST'])
-def register():
-    """Registrar novo usuário"""
-    data = request.get_json() or {}
-    email = data.get('email')
-    password = data.get('password')
-    username = data.get('username')
-    
-    if not email or not password or not username:
-        return jsonify({'error': 'Preencha todos os campos'}), 400
-    
-    if not supabase:
-        if email in db['users']:
-            return jsonify({'error': 'Email já cadastrado'}), 400
-        db['users'][email] = {
-            'username': username,
-            'password': generate_password_hash(password),
-            'created_at': time.time()
-        }
-        return jsonify({
-            'success': True,
-            'message': 'Usuário criado com sucesso!',
-            'user': {'email': email, 'username': username}
-        })
-    
-    try:
-        result = supabase.auth.sign_up({
-            'email': email,
-            'password': password,
-            'options': {
-                'data': {
-                    'username': username,
-                    'full_name': username
-                }
-            }
-        })
-        
-        if result.user:
-            return jsonify({
-                'success': True,
-                'message': 'Usuário criado com sucesso!',
-                'user': {
-                    'id': result.user.id,
-                    'email': result.user.email,
-                    'username': username
-                }
-            })
-        else:
-            return jsonify({'error': 'Erro ao criar usuário'}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
+.login-container input::placeholder {
+    color: var(--text-muted);
+}
 
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-    """Login do usuário"""
-    data = request.get_json() or {}
-    email = data.get('email')
-    password = data.get('password')
-    
-    if not email or not password:
-        return jsonify({'error': 'Preencha todos os campos'}), 400
-    
-    if not supabase:
-        if email not in db['users']:
-            return jsonify({'error': 'Email ou senha incorretos'}), 401
-        user = db['users'][email]
-        if not check_password_hash(user['password'], password):
-            return jsonify({'error': 'Email ou senha incorretos'}), 401
-        
-        session['user_id'] = email
-        session['user_email'] = email
-        session['user_username'] = user['username']
-        session.permanent = True
-        
-        return jsonify({
-            'success': True,
-            'message': 'Login realizado com sucesso!',
-            'user': {'email': email, 'username': user['username']}
-        })
-    
-    try:
-        result = supabase.auth.sign_in_with_password({
-            'email': email,
-            'password': password
-        })
-        
-        if result.user:
-            session['user_id'] = result.user.id
-            session['user_email'] = result.user.email
-            session['user_username'] = result.user.user_metadata.get('username', 'Usuário')
-            session.permanent = True
-            
-            return jsonify({
-                'success': True,
-                'message': 'Login realizado com sucesso!',
-                'user': {
-                    'id': result.user.id,
-                    'email': result.user.email,
-                    'username': session['user_username']
-                }
-            })
-        else:
-            return jsonify({'error': 'Email ou senha incorretos'}), 401
-    except Exception as e:
-        return jsonify({'error': str(e)}), 401
+.login-container .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 14px;
+    font-size: 16px;
+    margin-top: 8px;
+}
 
-@app.route('/api/auth/logout', methods=['POST'])
-def logout():
-    """Logout do usuário"""
-    session.clear()
-    return jsonify({'success': True, 'message': 'Logout realizado'})
+.login-link {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: 16px;
+    cursor: pointer;
+    transition: var(--transition);
+}
 
-@app.route('/api/auth/user')
-def get_user():
-    """Buscar usuário atual"""
-    if 'user_id' in session:
-        return jsonify({
-            'id': session['user_id'],
-            'email': session.get('user_email'),
-            'username': session.get('user_username', 'Usuário'),
-            'authenticated': True
-        })
-    return jsonify({'authenticated': False}), 401
+.login-link:hover {
+    color: var(--accent);
+}
 
-@app.route('/api/auth/check')
-def check_auth():
-    """Verificar se o usuário está autenticado"""
-    if 'user_id' in session:
-        return jsonify({'authenticated': True, 'user_id': session['user_id']})
-    return jsonify({'authenticated': False})
+.login-status {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    display: none;
+}
 
-# ==========================================
-# GERENCIAMENTO DE ARQUIVOS
-# ==========================================
+.login-status.success {
+    display: block;
+    background: rgba(72, 187, 120, 0.15);
+    border: 1px solid #48bb78;
+    color: #48bb78;
+}
 
-def get_user_id():
-    """Pega o ID do usuário atual"""
-    return session.get('user_id', 'anonymous')
+.login-status.error {
+    display: block;
+    background: rgba(229, 62, 62, 0.15);
+    border: 1px solid #fc8181;
+    color: #fc8181;
+}
 
-def save_file_to_db(file_id, filename, file_path, file_size, user_id=None):
-    """Salva arquivo no Supabase ou local"""
-    if not user_id:
-        user_id = get_user_id()
-    
-    if not supabase:
-        db['files'][file_id] = {
-            'id': file_id,
-            'name': filename,
-            'path': file_path,
-            'size': file_size,
-            'size_formatted': format_size(file_size),
-            'date': time.time(),
-            'date_formatted': datetime.now().strftime('%d/%m/%Y %H:%M'),
-            'user_id': user_id,
-            'shared': False
-        }
-        return True
-    
-    try:
-        data = {
-            'file_id': file_id,
-            'filename': filename,
-            'file_path': file_path,
-            'file_size': file_size,
-            'user_id': user_id,
-            'shared': False,
-            'created_at': datetime.now().isoformat()
-        }
-        supabase.table('files').insert(data).execute()
-        return True
-    except Exception as e:
-        print(f"❌ Erro ao salvar no Supabase: {e}")
-        db['files'][file_id] = {
-            'id': file_id,
-            'name': filename,
-            'path': file_path,
-            'size': file_size,
-            'size_formatted': format_size(file_size),
-            'date': time.time(),
-            'date_formatted': datetime.now().strftime('%d/%m/%Y %H:%M'),
-            'user_id': user_id,
-            'shared': False
-        }
-        return False
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px 8px 20px;
+    background: var(--bg-card);
+    border-radius: 20px;
+    border: 1px solid var(--border);
+}
 
-def get_files_from_db(user_id=None):
-    """Busca arquivos pertencentes ao usuário"""
-    if not user_id:
-        user_id = get_user_id()
-    
-    if not supabase:
-        files = []
-        for file_id, info in db['files'].items():
-            if info.get('user_id') == user_id:
-                files.append({
-                    'id': file_id,
-                    'name': info['name'],
-                    'size': info['size'],
-                    'size_formatted': info['size_formatted'],
-                    'date': info['date_formatted'],
-                    'shared': info.get('shared', False)
-                })
-        return files
-    
-    try:
-        result = supabase.table('files').select('*').eq('user_id', user_id).execute()
-        files = []
-        for item in result.data:
-            files.append({
-                'id': item['file_id'],
-                'name': item['filename'],
-                'size': item['file_size'],
-                'size_formatted': format_size(item['file_size']),
-                'date': item['created_at'],
-                'shared': item.get('shared', False)
-            })
-        return files
-    except Exception as e:
-        print(f"❌ Erro ao buscar arquivos: {e}")
-        files = []
-        for file_id, info in db['files'].items():
-            if info.get('user_id') == user_id:
-                files.append({
-                    'id': file_id,
-                    'name': info['name'],
-                    'size': info['size'],
-                    'size_formatted': info['size_formatted'],
-                    'date': info['date_formatted'],
-                    'shared': info.get('shared', False)
-                })
-        return files
+.user-info .username {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
 
-def get_file_path(file_id):
-    if file_id in db['files']:
-        return db['files'][file_id]['path']
-    
-    if supabase:
-        try:
-            result = supabase.table('files').select('file_path').eq('file_id', file_id).execute()
-            if result.data:
-                return result.data[0]['file_path']
-        except Exception:
-            pass
-    
-    files = glob.glob(f"uploads/{file_id}_*")
-    if files:
-        return files[0]
-    
-    return None
+.user-info .logout-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: var(--transition);
+}
 
-def delete_file_from_db(file_id):
-    if file_id in db['files']:
-        del db['files'][file_id]
-    
-    if supabase:
-        try:
-            supabase.table('files').delete().eq('file_id', file_id).execute()
-            return True
-        except Exception:
-            pass
-    return False
+.user-info .logout-btn:hover {
+    color: #fc8181;
+    background: rgba(229, 62, 62, 0.1);
+}
 
-# ==========================================
-# COMPARTILHAMENTO ENTRE USUÁRIOS
-# ==========================================
+/* ===== APP CONTAINER ===== */
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
 
-@app.route('/api/share/<file_id>', methods=['POST'])
-def share_file_user(file_id):
-    """Compartilhar arquivo com outro usuário"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
-    
-    data = request.get_json() or {}
-    target_email = data.get('email')
-    
-    if not target_email:
-        return jsonify({'error': 'Email do destinatário é obrigatório'}), 400
-    
-    if not supabase:
-        return jsonify({'error': 'Funcionalidade disponível apenas com banco online'}), 400
-    
-    try:
-        result = supabase.auth.admin.list_users()
-        target_user = None
-        for user in result:
-            if user.email == target_email:
-                target_user = user
-                break
-        
-        if not target_user:
-            return jsonify({'error': 'Usuário não encontrado'}), 404
-        
-        share_data = {
-            'file_id': file_id,
-            'from_user': session['user_id'],
-            'to_user': target_user.id,
-            'status': 'pending',
-            'created_at': datetime.now().isoformat()
-        }
-        supabase.table('shares').insert(share_data).execute()
-        
-        # Notificar especificamente o destinatário via WebSocket
-        socketio.emit('file_shared', {
-            'file_id': file_id,
-            'from': session.get('user_email')
-        }, room=target_user.id)
-        
-        return jsonify({
-            'success': True,
-            'message': f'Arquivo compartilhado com {target_email}!'
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
+/* ===== HEADER ===== */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+}
 
-@app.route('/api/shared-files')
-def get_shared_files():
-    """Buscar arquivos compartilhados com o usuário atual"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
-    
-    if not supabase:
-        return jsonify([])
-    
-    try:
-        result = supabase.table('shares').select('*').eq('to_user', session['user_id']).execute()
-        files = []
-        for item in result.data:
-            file_info = get_file_info(item['file_id'])
-            if file_info:
-                files.append({
-                    'file_id': item['file_id'],
-                    'from_user': item['from_user'],
-                    'status': item['status'],
-                    'created_at': item['created_at']
-                })
-        return jsonify(files)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
 
-def get_file_info(file_id):
-    if file_id in db['files']:
-        return db['files'][file_id]
-    
-    if supabase:
-        try:
-            result = supabase.table('files').select('*').eq('file_id', file_id).execute()
-            if result.data:
-                return result.data[0]
-        except Exception:
-            pass
-    return None
+.logo-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--accent);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #fff;
+}
 
-# ==========================================
-# ROTAS DA API DE ARQUIVOS
-# ==========================================
+.logo h1 {
+    font-size: 24px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+.subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 400;
+    -webkit-text-fill-color: var(--text-secondary);
+}
 
-@app.route('/api/device')
-def device():
-    return jsonify({
-        'id': device_id,
-        'ip': get_local_ip(),
-        'port': 5001
-    })
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
 
-@app.route('/api/qr')
-def generate_qr():
-    """Gera QR Code contendo a URL do app e o ID do usuário/dispositivo"""
-    user_id = get_user_id()
-    url = f"https://conexz-app.onrender.com?connect_to={user_id}"
-    
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(url)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffered = io.BytesIO()
-    img.save(buffered, format="PNG")
-    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
-    
-    return jsonify({
-        'qr': qr_base64,
-        'url': url
-    })
+.device-badge {
+    background: var(--bg-card);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
 
-@app.route('/api/upload', methods=['POST'])
-def upload():
-    """Upload de arquivo com notificação privada"""
-    user_id = get_user_id()
-    room_code = request.form.get('room_code')  # Suporte a envio por código de sala
-    
-    if 'file' not in request.files:
-        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'Nome do arquivo inválido'}), 400
-    
-    file_id = hashlib.md5((file.filename + str(time.time())).encode()).hexdigest()
-    file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{file.filename}")
-    file.save(file_path)
-    size = os.path.getsize(file_path)
-    
-    save_file_to_db(file_id, file.filename, file_path, size, user_id)
-    
-    payload = {
-        'id': file_id,
-        'name': file.filename,
-        'size': format_size(size),
-        'user_id': user_id
+/* ===== BOTÕES ===== */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+}
+
+.btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: var(--bg-hover);
+}
+
+.btn-danger {
+    background: #e53e3e;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #c53030;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* ===== STATUS PANEL ===== */
+.status-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+}
+
+.status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.status-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.status-title i {
+    color: var(--accent);
+}
+
+.status-badge {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(72, 187, 120, 0.2);
+    color: #48bb78;
+}
+
+.status-badge.offline {
+    background: rgba(229, 62, 62, 0.2);
+    color: #fc8181;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.status-item {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    transition: var(--transition);
+}
+
+.status-item:hover {
+    border-color: var(--accent);
+}
+
+.status-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.status-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.status-sub span {
+    background: var(--bg-card);
+    padding: 2px 10px;
+    border-radius: 10px;
+}
+
+.status-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ===== TABS ===== */
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.tab {
+    padding: 10px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    transition: var(--transition);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.tab:hover {
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0a0a1a;
+    font-weight: 600;
+}
+
+.badge {
+    background: var(--accent);
+    color: #0a0a1a;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 6px;
+}
+
+/* ===== TAB CONTENT ===== */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content h2 {
+    margin-bottom: 24px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+}
+
+.tab-content h2 i {
+    color: var(--accent);
+}
+
+/* ===== UPLOAD ===== */
+.upload-area {
+    border: 3px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    background: var(--bg-primary);
+}
+
+.upload-area:hover {
+    border-color: var(--accent);
+    background: var(--bg-card);
+}
+
+.upload-icon i {
+    font-size: 56px;
+    color: var(--accent);
+    margin-bottom: 16px;
+}
+
+.upload-area h3 {
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+.upload-area p {
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.upload-area input {
+    display: none;
+}
+
+/* ===== FILE LIST ===== */
+.file-list {
+    display: grid;
+    gap: 10px;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    transition: var(--transition);
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.file-item:hover {
+    transform: translateX(4px);
+    border-color: var(--accent);
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.file-info i {
+    font-size: 24px;
+    color: var(--accent);
+    width: 32px;
+    text-align: center;
+}
+
+.file-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .container {
+        padding: 12px;
     }
-
-    # Notificar APENAS para os dispositivos do usuário ou da sala específica
-    if room_code:
-        socketio.emit('new_file', payload, room=room_code)
-    else:
-        socketio.emit('new_file', payload, room=user_id)
-    
-    return jsonify({
-        'id': file_id,
-        'name': file.filename,
-        'size': size,
-        'size_formatted': format_size(size),
-        'message': '✅ Arquivo enviado com sucesso!'
-    })
-
-@app.route('/api/files')
-def list_files():
-    """Listar arquivos pertencentes exclusivamente ao usuário logado"""
-    user_id = get_user_id()
-    files = get_files_from_db(user_id)
-    return jsonify(files)
-
-@app.route('/api/view/<file_id>')
-def view_file(file_id):
-    file_path = get_file_path(file_id)
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
-    
-    filename = os.path.basename(file_path)
-    if '_' in filename:
-        filename = filename.split('_', 1)[1]
-    
-    ext = filename.split('.')[-1].lower() if '.' in filename else ''
-    
-    mimetypes = {
-        'mp4': 'video/mp4',
-        'webm': 'video/webm',
-        'mp3': 'audio/mpeg',
-        'wav': 'audio/wav',
-        'ogg': 'audio/ogg',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'gif': 'image/gif',
-        'pdf': 'application/pdf',
-        'txt': 'text/plain',
-        'json': 'application/json',
-        'zip': 'application/zip'
+    header {
+        flex-direction: column;
+        text-align: center;
     }
-    mimetype = mimetypes.get(ext, 'application/octet-stream')
-    
-    return send_file(file_path, mimetype=mimetype)
-
-@app.route('/api/download/<file_id>')
-def download_file(file_id):
-    file_path = get_file_path(file_id)
-    if not file_path or not os.path.exists(file_path):
-        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
-    
-    filename = os.path.basename(file_path)
-    if '_' in filename:
-        filename = filename.split('_', 1)[1]
-    
-    return send_file(
-        file_path,
-        as_attachment=True,
-        download_name=filename
-    )
-
-@app.route('/api/share-link/<file_id>')
-def share_file(file_id):
-    file_path = get_file_path(file_id)
-    if not file_path:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    token = secrets.token_urlsafe(12)
-    share_url = f"{request.host_url}api/s/{token}"
-    
-    db['shared_links'][token] = {
-        'file_id': file_id,
-        'expires': time.time() + 86400  # 24 horas
+    .login-container {
+        padding: 32px 24px;
+        margin: 16px;
     }
-    
-    return jsonify({
-        'link': share_url,
-        'expires': time.time() + 86400,
-        'token': token
-    })
-
-@app.route('/api/s/<token>')
-def shared_access(token):
-    if token not in db['shared_links']:
-        return jsonify({'error': 'Link inválido ou expirado'}), 404
-    
-    link = db['shared_links'][token]
-    if time.time() > link['expires']:
-        del db['shared_links'][token]
-        return jsonify({'error': 'Link expirado'}), 410
-    
-    return download_file(link['file_id'])
-
-@app.route('/api/delete/<file_id>', methods=['DELETE'])
-def delete_file(file_id):
-    user_id = get_user_id()
-    
-    if supabase:
-        try:
-            result = supabase.table('files').select('user_id').eq('file_id', file_id).execute()
-            if result.data and result.data[0]['user_id'] != user_id:
-                return jsonify({'error': 'Você não tem permissão para deletar este arquivo'}), 403
-        except Exception:
-            pass
-    
-    file_path = get_file_path(file_id)
-    if file_path and os.path.exists(file_path):
-        try:
-            os.remove(file_path)
-        except OSError:
-            pass
-    
-    delete_file_from_db(file_id)
-    
-    # Emite aviso de deleção somente para a sala do próprio usuário
-    socketio.emit('file_deleted', {'id': file_id}, room=user_id)
-    return jsonify({'message': '🗑️ Arquivo deletado com sucesso'})
-
-@app.route('/api/status')
-def status():
-    user_id = get_user_id()
-    files = get_files_from_db(user_id)
-    return jsonify({
-        'status': 'online',
-        'device': device_id,
-        'ip': get_local_ip(),
-        'port': 5001,
-        'files': len(files),
-        'authenticated': 'user_id' in session
-    })
-
-@app.route('/api/status-completo')
-def status_completo():
-    """Estatísticas organizadas dos arquivos do usuário logado"""
-    user_id = get_user_id()
-    files = get_files_from_db(user_id)
-    
-    videos = 0
-    musicas = 0
-    imagens = 0
-    documentos = 0
-    outros = 0
-    total_size = 0
-    
-    for file in files:
-        name = file['name'].lower()
-        size = file.get('size', 0)
-        total_size += size
-        
-        if name.endswith(('.mp4', '.webm', '.mov', '.mkv', '.avi')):
-            videos += 1
-        elif name.endswith(('.mp3', '.wav', '.ogg', '.flac', '.m4a')):
-            musicas += 1
-        elif name.endswith(('.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp')):
-            imagens += 1
-        elif name.endswith(('.pdf', '.doc', '.docx', '.txt', '.xls', '.xlsx', '.ppt', '.pptx')):
-            documentos += 1
-        else:
-            outros += 1
-            
-    return jsonify({
-        'status': 'online',
-        'device_id': device_id,
-        'user_id': user_id,
-        'authenticated': 'user_id' in session,
-        'total_files': len(files),
-        'total_size_bytes': total_size,
-        'total_size_formatted': format_size(total_size),
-        'categories': {
-            'videos': videos,
-            'musicas': musicas,
-            'imagens': imagens,
-            'documentos': documentos,
-            'outros': outros
-        }
-    })
-
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5001))
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+}
