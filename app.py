@@ -19,10 +19,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'conexz-secret')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'conexz-secret-key-production-2026')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+CORS(app, supports_credentials=True)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent' if os.getenv('PRODUCTION') else 'threading')
 
 # ==========================================
 # CONFIGURAR SUPABASE
@@ -37,20 +40,20 @@ if SUPABASE_URL and SUPABASE_KEY:
         supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
         print("✅ Conectado ao Supabase!")
     except Exception as e:
-        print(f"❌ Erro ao conectar Supabase: {e}")
+        print(f"❌ Erro ao conectar ao Supabase: {e}")
 else:
-    print("⚠️ Supabase não configurado!")
+    print("⚠️ Supabase não configurado! Rodando com armazenamento local de sessão/fallback.")
 
 # ==========================================
-# CONFIGURAÇÕES
+# CONFIGURAÇÕES DE ARQUIVO
 # ==========================================
 
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB
+app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # Limite de 1GB
 
-# Banco de dados local (fallback)
+# Banco de dados local (fallback em memória)
 db = {'files': {}, 'shared_links': {}, 'users': {}}
 device_id = secrets.token_hex(8)
 
@@ -61,15 +64,15 @@ def get_local_ip():
         ip = s.getsockname()[0]
         s.close()
         return ip
-    except:
+    except Exception:
         return "127.0.0.1"
 
-def format_size(bytes):
+def format_size(bytes_num):
     for unit in ['B', 'KB', 'MB', 'GB']:
-        if bytes < 1024:
-            return f"{bytes:.1f} {unit}"
-        bytes /= 1024
-    return f"{bytes:.1f} TB"
+        if bytes_num < 1024:
+            return f"{bytes_num:.1f} {unit}"
+        bytes_num /= 1024
+    return f"{bytes_num:.1f} TB"
 
 # ==========================================
 # ROTAS DO PWA
@@ -90,21 +93,20 @@ def serve_sw():
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     """Registrar novo usuário"""
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    username = data.get('username')
+    data = request.get_json() or {}
+    email = data.get('email', '').strip()
+    password = data.get('password', '').strip()
+    username = data.get('username', '').strip()
     
     if not email or not password or not username:
-        return jsonify({'error': 'Preencha todos os campos'}), 400
+        return jsonify({'error': 'Preencha todos os campos obrigatórios'}), 400
     
     if not supabase:
-        # Fallback local
         if email in db['users']:
             return jsonify({'error': 'Email já cadastrado'}), 400
         db['users'][email] = {
             'username': username,
-            'password': hashlib.md5(password.encode()).hexdigest(),
+            'password': hashlib.sha256(password.encode()).hexdigest(),
             'created_at': time.time()
         }
         return jsonify({
@@ -136,32 +138,34 @@ def register():
                 }
             })
         else:
-            return jsonify({'error': 'Erro ao criar usuário'}), 400
+            return jsonify({'error': 'Erro ao registrar usuário no provedor de autenticação'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     """Login do usuário"""
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
+    data = request.get_json() or {}
+    email = data.get('email', '').strip()
+    password = data.get('password', '').strip()
     
     if not email or not password:
         return jsonify({'error': 'Preencha todos os campos'}), 400
     
     if not supabase:
-        # Fallback local
         if email not in db['users']:
             return jsonify({'error': 'Email ou senha incorretos'}), 401
         user = db['users'][email]
-        if user['password'] != hashlib.md5(password.encode()).hexdigest():
+        if user['password'] != hashlib.sha256(password.encode()).hexdigest():
             return jsonify({'error': 'Email ou senha incorretos'}), 401
+        
         session['user_id'] = email
         session['user_email'] = email
+        session['user_username'] = user['username']
+        session.permanent = True
         return jsonify({
             'success': True,
-            'message': 'Login realizado!',
+            'message': 'Login realizado com sucesso!',
             'user': {'email': email, 'username': user['username']}
         })
     
@@ -172,9 +176,12 @@ def login():
         })
         
         if result.user:
+            username_meta = result.user.user_metadata.get('username') if result.user.user_metadata else None
+            username = username_meta or email.split('@')[0]
+            
             session['user_id'] = result.user.id
             session['user_email'] = result.user.email
-            session['user_username'] = result.user.user_metadata.get('username', 'Usuário')
+            session['user_username'] = username
             session.permanent = True
             
             return jsonify({
@@ -183,7 +190,7 @@ def login():
                 'user': {
                     'id': result.user.id,
                     'email': result.user.email,
-                    'username': result.user.user_metadata.get('username', 'Usuário')
+                    'username': username
                 }
             })
         else:
@@ -195,7 +202,7 @@ def login():
 def logout():
     """Logout do usuário"""
     session.clear()
-    return jsonify({'success': True, 'message': 'Logout realizado'})
+    return jsonify({'success': True, 'message': 'Logout realizado com sucesso'})
 
 @app.route('/api/auth/user')
 def get_user():
@@ -211,23 +218,21 @@ def get_user():
 
 @app.route('/api/auth/check')
 def check_auth():
-    """Verificar se o usuário está autenticado"""
+    """Verificar status da autenticação"""
     if 'user_id' in session:
         return jsonify({'authenticated': True, 'user_id': session['user_id']})
     return jsonify({'authenticated': False})
 
 # ==========================================
-# ARQUIVOS POR USUÁRIO
+# GERENCIAMENTO DE ARQUIVOS E BANCO
 # ==========================================
 
 def get_user_id():
-    """Pega o ID do usuário atual"""
-    if 'user_id' in session:
-        return session['user_id']
-    return 'anonymous'
+    """Retorna o ID do usuário da sessão ou anônimo"""
+    return session.get('user_id', 'anonymous')
 
 def save_file_to_db(file_id, filename, file_path, file_size, user_id=None):
-    """Salva arquivo no Supabase ou local"""
+    """Salva dados do arquivo no Supabase ou localmente"""
     if not user_id:
         user_id = get_user_id()
     
@@ -258,8 +263,7 @@ def save_file_to_db(file_id, filename, file_path, file_size, user_id=None):
         supabase.table('files').insert(data).execute()
         return True
     except Exception as e:
-        print(f"❌ Erro ao salvar: {e}")
-        # Fallback local
+        print(f"❌ Erro ao salvar registro no Supabase: {e}")
         db['files'][file_id] = {
             'id': file_id,
             'name': filename,
@@ -274,7 +278,7 @@ def save_file_to_db(file_id, filename, file_path, file_size, user_id=None):
         return False
 
 def get_files_from_db(user_id=None):
-    """Busca arquivos do Supabase ou local"""
+    """Retorna lista de arquivos do usuário"""
     if not user_id:
         user_id = get_user_id()
     
@@ -301,13 +305,12 @@ def get_files_from_db(user_id=None):
                 'name': item['filename'],
                 'size': item['file_size'],
                 'size_formatted': format_size(item['file_size']),
-                'date': item['created_at'],
+                'date': item.get('created_at', ''),
                 'shared': item.get('shared', False)
             })
         return files
     except Exception as e:
-        print(f"❌ Erro ao buscar: {e}")
-        # Fallback local
+        print(f"❌ Erro ao buscar lista no Supabase: {e}")
         files = []
         for file_id, info in db['files'].items():
             if info.get('user_id') == user_id:
@@ -322,7 +325,7 @@ def get_files_from_db(user_id=None):
         return files
 
 def get_file_path(file_id):
-    """Busca caminho do arquivo"""
+    """Encontra o caminho físico do arquivo"""
     if file_id in db['files']:
         return db['files'][file_id]['path']
     
@@ -331,18 +334,17 @@ def get_file_path(file_id):
             result = supabase.table('files').select('file_path').eq('file_id', file_id).execute()
             if result.data:
                 return result.data[0]['file_path']
-        except:
+        except Exception:
             pass
     
-    # Buscar na pasta uploads
-    files = glob.glob(f"uploads/{file_id}_*")
+    files = glob.glob(os.path.join(UPLOAD_FOLDER, f"{file_id}_*"))
     if files:
         return files[0]
     
     return None
 
 def delete_file_from_db(file_id):
-    """Deleta arquivo do Supabase ou local"""
+    """Exclui o registro do arquivo"""
     if file_id in db['files']:
         del db['files'][file_id]
     
@@ -350,31 +352,30 @@ def delete_file_from_db(file_id):
         try:
             supabase.table('files').delete().eq('file_id', file_id).execute()
             return True
-        except:
+        except Exception:
             pass
     return False
 
 # ==========================================
-# COMPARTILHAR ENTRE USUÁRIOS
+# COMPARTILHAMENTO
 # ==========================================
 
 @app.route('/api/share/<file_id>', methods=['POST'])
 def share_file_user(file_id):
-    """Compartilhar arquivo com outro usuário"""
+    """Compartilhar arquivo com outro usuário por e-mail"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
+        return jsonify({'error': 'Faça login para compartilhar'}), 401
     
-    data = request.get_json()
-    target_email = data.get('email')
+    data = request.get_json() or {}
+    target_email = data.get('email', '').strip()
     
     if not target_email:
         return jsonify({'error': 'Email do destinatário é obrigatório'}), 400
     
     if not supabase:
-        return jsonify({'error': 'Funcionalidade disponível apenas com Supabase'}), 400
+        return jsonify({'error': 'Recurso de compartilhamento disponível com Supabase habilitado'}), 400
     
     try:
-        # Buscar usuário destino
         result = supabase.auth.admin.list_users()
         target_user = None
         for user in result:
@@ -383,9 +384,8 @@ def share_file_user(file_id):
                 break
         
         if not target_user:
-            return jsonify({'error': 'Usuário não encontrado'}), 404
+            return jsonify({'error': 'Usuário de destino não encontrado'}), 404
         
-        # Criar compartilhamento
         share_data = {
             'file_id': file_id,
             'from_user': session['user_id'],
@@ -397,52 +397,36 @@ def share_file_user(file_id):
         
         return jsonify({
             'success': True,
-            'message': f'Arquivo compartilhado com {target_email}!'
+            'message': f'Arquivo compartilhado com {target_email} com sucesso!'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
 @app.route('/api/shared-files')
 def get_shared_files():
-    """Buscar arquivos compartilhados com o usuário"""
+    """Buscar arquivos compartilhados com a conta conectada"""
     if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
+        return jsonify({'error': 'Faça login para visualizar'}), 401
     
     if not supabase:
-        return jsonify({'error': 'Funcionalidade disponível apenas com Supabase'}), 400
+        return jsonify({'error': 'Recurso disponível apenas com Supabase'}), 400
     
     try:
         result = supabase.table('shares').select('*').eq('to_user', session['user_id']).execute()
         files = []
         for item in result.data:
-            file_info = get_file_info(item['file_id'])
-            if file_info:
-                files.append({
-                    'file_id': item['file_id'],
-                    'from_user': item['from_user'],
-                    'status': item['status'],
-                    'created_at': item['created_at']
-                })
+            files.append({
+                'file_id': item['file_id'],
+                'from_user': item['from_user'],
+                'status': item['status'],
+                'created_at': item.get('created_at')
+            })
         return jsonify(files)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
-def get_file_info(file_id):
-    """Busca informações de um arquivo"""
-    if file_id in db['files']:
-        return db['files'][file_id]
-    
-    if supabase:
-        try:
-            result = supabase.table('files').select('*').eq('file_id', file_id).execute()
-            if result.data:
-                return result.data[0]
-        except:
-            pass
-    return None
-
 # ==========================================
-# ROTAS DA API
+# ROTAS DA API DE MÍDIA E DISPOSITIVO
 # ==========================================
 
 @app.route('/')
@@ -459,11 +443,11 @@ def device():
 
 @app.route('/api/qr')
 def generate_qr():
-    """Gera QR Code com a URL pública do Render"""
-    url = "https://conexz-app.onrender.com"
+    """Gera QR Code dinâmico para conexão local ou servidor hospedado"""
+    server_url = os.getenv('PUBLIC_URL', f"http://{get_local_ip()}:5001")
     
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(url)
+    qr = qrcode.QRCode(version=1, box_size=10, border=3)
+    qr.add_data(server_url)
     qr.make(fit=True)
     
     img = qr.make_image(fill_color="black", back_color="white")
@@ -473,61 +457,61 @@ def generate_qr():
     
     return jsonify({
         'qr': qr_base64,
-        'url': url
+        'url': server_url
     })
 
 @app.route('/api/upload', methods=['POST'])
 def upload():
-    """Upload de arquivo para o usuário"""
+    """Upload de arquivos e notificação via Socket.IO"""
     user_id = get_user_id()
     
     if 'file' not in request.files:
-        return jsonify({'error': 'Nenhum arquivo'}), 400
+        return jsonify({'error': 'Nenhum arquivo enviado na requisição'}), 400
     
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': 'Nome vazio'}), 400
+        return jsonify({'error': 'Nome do arquivo está vazio'}), 400
     
-    file_id = hashlib.md5(file.filename.encode() + str(time.time()).encode()).hexdigest()
-    file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{file.filename}")
-    file.save(file_path)
-    size = os.path.getsize(file_path)
+    filename = file.filename
+    file_id = hashlib.md5(f"{filename}{time.time()}".encode()).hexdigest()
+    file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{filename}")
     
-    save_file_to_db(file_id, file.filename, file_path, size, user_id)
-    
-    socketio.emit('new_file', {
-        'id': file_id,
-        'name': file.filename,
-        'size': format_size(size),
-        'user_id': user_id
-    })
-    
-    return jsonify({
-        'id': file_id,
-        'name': file.filename,
-        'size': size,
-        'size_formatted': format_size(size),
-        'message': '✅ Arquivo enviado com sucesso!'
-    })
+    try:
+        file.save(file_path)
+        size = os.path.getsize(file_path)
+        
+        save_file_to_db(file_id, filename, file_path, size, user_id)
+        
+        socketio.emit('new_file', {
+            'id': file_id,
+            'name': filename,
+            'size': format_size(size),
+            'user_id': user_id
+        })
+        
+        return jsonify({
+            'success': True,
+            'id': file_id,
+            'name': filename,
+            'size': size,
+            'size_formatted': format_size(size),
+            'message': '✅ Arquivo enviado com sucesso!'
+        })
+    except Exception as e:
+        return jsonify({'error': f'Falha ao salvar arquivo: {str(e)}'}), 500
 
 @app.route('/api/files')
 def list_files():
-    """Listar arquivos do usuário"""
+    """Lista todos os arquivos cadastrados do usuário atual"""
     user_id = get_user_id()
     files = get_files_from_db(user_id)
     return jsonify(files)
 
 @app.route('/api/view/<file_id>')
 def view_file(file_id):
-    if file_id not in db['files']:
-        file_path = get_file_path(file_id)
-        if not file_path:
-            return jsonify({'error': 'Arquivo não encontrado'}), 404
-    else:
-        file_info = db['files'][file_id]
-        file_path = file_info['path']
-    
-    if not os.path.exists(file_path):
+    """Exibição inline de arquivos de áudio, vídeo ou imagens"""
+    file_path = get_file_path(file_id)
+    if not file_path or not os.path.exists(file_path):
         return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
     
     filename = os.path.basename(file_path)
@@ -537,19 +521,10 @@ def view_file(file_id):
     ext = filename.split('.')[-1].lower() if '.' in filename else ''
     
     mimetypes = {
-        'mp4': 'video/mp4',
-        'webm': 'video/webm',
-        'mp3': 'audio/mpeg',
-        'wav': 'audio/wav',
-        'ogg': 'audio/ogg',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'gif': 'image/gif',
-        'pdf': 'application/pdf',
-        'txt': 'text/plain',
-        'json': 'application/json',
-        'zip': 'application/zip'
+        'mp4': 'video/mp4', 'webm': 'video/webm', 'mkv': 'video/x-matroska',
+        'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'ogg': 'audio/ogg', 'flac': 'audio/flac',
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'gif': 'image/gif', 'webp': 'image/webp',
+        'pdf': 'application/pdf', 'txt': 'text/plain; charset=utf-8', 'json': 'application/json'
     }
     mimetype = mimetypes.get(ext, 'application/octet-stream')
     
@@ -557,16 +532,10 @@ def view_file(file_id):
 
 @app.route('/api/download/<file_id>')
 def download_file(file_id):
-    if file_id not in db['files']:
-        file_path = get_file_path(file_id)
-        if not file_path:
-            return jsonify({'error': 'Arquivo não encontrado'}), 404
-    else:
-        file_info = db['files'][file_id]
-        file_path = file_info['path']
-    
-    if not os.path.exists(file_path):
-        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
+    """Download forçado do arquivo selecionado"""
+    file_path = get_file_path(file_id)
+    if not file_path or not os.path.exists(file_path):
+        return jsonify({'error': 'Arquivo não localizado para download'}), 404
     
     filename = os.path.basename(file_path)
     if '_' in filename:
@@ -579,60 +548,68 @@ def download_file(file_id):
     )
 
 @app.route('/api/share-link/<file_id>')
-def share_file(file_id):
-    if file_id not in db['files']:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
+def share_link(file_id):
+    """Gera link temporário público para download sem necessidade de login"""
+    file_path = get_file_path(file_id)
+    if not file_path:
+        return jsonify({'error': 'Arquivo inexistente'}), 404
     
-    token = secrets.token_urlsafe(12)
-    share_url = f"{request.host_url}api/s/{token}"
+    token = secrets.token_urlsafe(16)
+    expires_at = time.time() + 86400  # Válido por 24 horas
     
     db['shared_links'][token] = {
         'file_id': file_id,
-        'expires': time.time() + 86400  # 24 horas
+        'expires': expires_at
     }
     
+    share_url = f"{request.host_url}api/s/{token}"
     return jsonify({
         'link': share_url,
-        'expires': time.time() + 86400,
+        'expires': expires_at,
         'token': token
     })
 
 @app.route('/api/s/<token>')
 def shared_access(token):
+    """Acesso ao link compartilhado por token"""
     if token not in db['shared_links']:
-        return jsonify({'error': 'Link inválido'}), 404
+        return jsonify({'error': 'Link de acesso inválido ou revogado'}), 404
     
     link = db['shared_links'][token]
     if time.time() > link['expires']:
         del db['shared_links'][token]
-        return jsonify({'error': 'Link expirado'}), 410
+        return jsonify({'error': 'Link temporário expirado'}), 410
     
     return download_file(link['file_id'])
 
 @app.route('/api/delete/<file_id>', methods=['DELETE'])
 def delete_file(file_id):
+    """Exclusão de arquivos com verificação de autoridade"""
     user_id = get_user_id()
     
-    # Verificar se o arquivo pertence ao usuário
     if supabase:
         try:
             result = supabase.table('files').select('user_id').eq('file_id', file_id).execute()
             if result.data and result.data[0]['user_id'] != user_id:
-                return jsonify({'error': 'Você não tem permissão para deletar este arquivo'}), 403
-        except:
+                return jsonify({'error': 'Sem permissão para remover este arquivo'}), 403
+        except Exception:
             pass
     
     file_path = get_file_path(file_id)
     if file_path and os.path.exists(file_path):
-        os.remove(file_path)
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            print(f"Erro ao remover arquivo físico: {e}")
     
     delete_file_from_db(file_id)
-    
     socketio.emit('file_deleted', {'id': file_id})
-    return jsonify({'message': '🗑️ Arquivo deletado'})
+    
+    return jsonify({'success': True, 'message': '🗑️ Arquivo deletado com sucesso'})
 
 @app.route('/api/status')
 def status():
+    """Verificação simples de status do servidor"""
     user_id = get_user_id()
     files = get_files_from_db(user_id)
     return jsonify({
@@ -646,6 +623,7 @@ def status():
 
 @app.route('/api/status-completo')
 def status_completo():
+    """Estatísticas detalhadas de uso e tipos de arquivos"""
     now = datetime.now()
     user_id = get_user_id()
     files = get_files_from_db(user_id)
@@ -687,24 +665,20 @@ def status_completo():
 
 @socketio.on('connect')
 def handle_connect():
-    device_id = request.args.get('device_id')
-    if device_id:
-        emit('device_connected', {'device_id': device_id}, broadcast=True)
-        print(f"📱 Dispositivo conectado: {device_id[:8]}...")
+    client_device = request.args.get('device_id', 'desconhecido')
+    emit('device_connected', {'device_id': client_device}, broadcast=True)
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    device_id = request.args.get('device_id')
-    if device_id:
-        emit('device_disconnected', {'device_id': device_id}, broadcast=True)
-        print(f"📱 Dispositivo desconectado: {device_id[:8]}...")
+    client_device = request.args.get('device_id', 'desconhecido')
+    emit('device_disconnected', {'device_id': client_device}, broadcast=True)
 
 # ==========================================
 # INICIAR SERVIDOR
 # ==========================================
 
 if __name__ == '__main__':
-    port = 5001
+    port = int(os.getenv('PORT', 5001))
     ip = get_local_ip()
     
     print("""
@@ -713,16 +687,10 @@ if __name__ == '__main__':
     ╠═══════════════════════════════════════════════════════════════╣
     ║   🌐  LOCAL:    http://localhost:{}                           ║
     ║   📱  CELULAR:  http://{}:{}                                ║
-    ║   📱  DISPOSITIVO: {}                                       ║
-    ║   🔐  SEGURANÇA: Login com email                              ║
-    ║   📤  COMPARTILHAR: Entre usuários                            ║
-    ║   💾  ARQUIVOS: Por usuário                                   ║
+    ║   📱  DISPOSITIVO ID: {}                                    ║
+    ║   🔐  SEGURANÇA: Login com sessão isolada                      ║
     ╚═══════════════════════════════════════════════════════════════╝
     """.format(port, ip, port, device_id[:8]))
-    
-    print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
-    print("📷 ESCANEIE O QR CODE PARA CONECTAR")
-    print("🔐 Faça login para acessar seus arquivos\n")
     
     socketio.run(
         app,
