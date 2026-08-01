@@ -58,7 +58,7 @@ def serve_manifest():
 
 @app.route('/sw.js')
 def serve_sw():
-    return send_from_directory('static', 'sw.js')
+    return send_from_directory('.', 'sw.js')
 
 # ==========================================
 # ROTAS DA API
@@ -78,9 +78,11 @@ def device():
 
 @app.route('/api/qr')
 def generate_qr():
-    """Gera QR Code com a URL do Render"""
+    """Gera QR Code com a URL correta do Render"""
+    # Usa a URL pública do Render
     url = "https://conexz-app.onrender.com"
     
+    # Gera QR Code com a URL
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
     qr.add_data(url)
     qr.make(fit=True)
@@ -305,18 +307,18 @@ if __name__ == '__main__':
     port = 5001
     ip = get_local_ip()
     
-    print("""
+    print(f"""
     ╔═══════════════════════════════════════════════════════════════╗
     ║   📱 CONEXZ - TRANSFERÊNCIA INTELIGENTE                     ║
     ╠═══════════════════════════════════════════════════════════════╣
-    ║  🌐  LOCAL:    http://localhost:{}                           ║
-    ║  📱  CELULAR:  http://{}:{}                ║
-    ║  📱  DISPOSITIVO: {}                                     ║
+    ║  🌐  LOCAL:    http://localhost:{port}                           ║
+    ║  📱  CELULAR:  http://{ip}:{port}                ║
+    ║  📱  DISPOSITIVO: {device_id[:8]}                                     ║
     ║  💾  ARQUIVOS: SALVOS LOCALMENTE                           ║
     ║  📂  PASTA:    uploads/                                     ║
     ║  🔗  CONEXÃO:  QR CODE                                     ║
     ╚═══════════════════════════════════════════════════════════════╝
-    """.format(port, ip, port, device_id[:8]))
+    """)
     
     print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
     print("📷 ESCANEIE O QR CODE PARA CONECTAR")
