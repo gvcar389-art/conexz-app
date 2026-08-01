@@ -1,5 +1,5 @@
 // ==========================================
-// CONEXZ - SCRIPT COMPLETO (COM AUTENTICAÇÃO)
+// CONEXZ - SCRIPT COMPLETO (SIMPLIFICADO)
 // ==========================================
 
 const socket = io();
@@ -10,137 +10,6 @@ let currentTheme = '#00d4ff';
 let statusInterval = null;
 
 // ==========================================
-// UTILITÁRIOS
-// ==========================================
-
-function togglePassword(inputId, btn) {
-    const input = document.getElementById(inputId);
-    const icon = btn.querySelector('i');
-    
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'fas fa-eye-slash';
-    } else {
-        input.type = 'password';
-        icon.className = 'fas fa-eye';
-    }
-}
-
-// ==========================================
-// AUTENTICAÇÃO
-// ==========================================
-
-async function login() {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    const status = document.getElementById('loginStatus');
-    
-    if (!email || !password) {
-        status.textContent = '❌ Preencha todos os campos';
-        status.className = 'login-status error';
-        return;
-    }
-    
-    try {
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            status.textContent = '✅ Login realizado!';
-            status.className = 'login-status success';
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            
-            if (data.user && data.user.username) {
-                document.getElementById('userNameDisplay').textContent = data.user.username;
-            }
-            
-            init();
-        } else {
-            status.textContent = '❌ ' + data.error;
-            status.className = 'login-status error';
-        }
-    } catch(e) {
-        status.textContent = '❌ Erro ao fazer login';
-        status.className = 'login-status error';
-        console.error(e);
-    }
-}
-
-async function register() {
-    const username = document.getElementById('registerUsername').value;
-    const email = document.getElementById('registerEmail').value;
-    const password = document.getElementById('registerPassword').value;
-    const status = document.getElementById('registerStatus');
-    
-    if (!username || !email || !password) {
-        status.textContent = '❌ Preencha todos os campos';
-        status.className = 'login-status error';
-        return;
-    }
-    
-    try {
-        const res = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, password })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            status.textContent = '✅ Cadastro realizado! Faça login.';
-            status.className = 'login-status success';
-            setTimeout(() => {
-                showLogin();
-                document.getElementById('loginEmail').value = email;
-            }, 1500);
-        } else {
-            status.textContent = '❌ ' + data.error;
-            status.className = 'login-status error';
-        }
-    } catch(e) {
-        status.textContent = '❌ Erro ao cadastrar';
-        status.className = 'login-status error';
-        console.error(e);
-    }
-}
-
-async function logout() {
-    try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        document.getElementById('mainContent').style.display = 'none';
-        document.getElementById('loginScreen').style.display = 'flex';
-        document.getElementById('loginStatus').textContent = '';
-        document.getElementById('loginStatus').className = 'login-status';
-        console.log('✅ Logout realizado');
-    } catch(e) {
-        console.error('❌ Erro no logout:', e);
-    }
-}
-
-function showRegister() {
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('registerForm').style.display = 'block';
-    document.getElementById('loginStatus').textContent = '';
-    document.getElementById('loginStatus').className = 'login-status';
-    document.getElementById('registerStatus').textContent = '';
-    document.getElementById('registerStatus').className = 'login-status';
-}
-
-function showLogin() {
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('registerForm').style.display = 'none';
-    document.getElementById('loginStatus').textContent = '';
-    document.getElementById('loginStatus').className = 'login-status';
-    document.getElementById('registerStatus').textContent = '';
-    document.getElementById('registerStatus').className = 'login-status';
-}
-
-// ==========================================
 // INICIALIZAÇÃO
 // ==========================================
 
@@ -148,17 +17,22 @@ async function init() {
     console.log('🚀 Iniciando ConexZ...');
     
     try {
+        // Pegar ID do dispositivo
         const res = await fetch('/api/device');
         const data = await res.json();
         document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0, 8);
         
+        // Carregar dados
         await carregarStatus();
         await loadFiles();
         await loadVideos();
         await loadMusic();
         await loadImages();
         
+        // Configurar eventos
         setupEvents();
+        
+        // Iniciar atualização automática de status
         iniciarStatusAutomatico();
         
         console.log('✅ ConexZ inicializado com sucesso!');
@@ -177,18 +51,18 @@ async function carregarStatus() {
         const res = await fetch('/api/status-completo');
         const data = await res.json();
         
-        document.getElementById('statusIP').textContent = data.ip || '--';
-        document.getElementById('statusPort').textContent = data.port || '--';
-        document.getElementById('statusTime').textContent = data.hora || '--';
-        document.getElementById('statusDate').textContent = data.data || '--';
-        document.getElementById('statusFiles').textContent = data.arquivos || 0;
-        document.getElementById('statusVideos').textContent = (data.videos || 0) + ' 🎬';
-        document.getElementById('statusMusicas').textContent = (data.musicas || 0) + ' 🎵';
-        document.getElementById('statusImagens').textContent = (data.imagens || 0) + ' 🖼️';
+        document.getElementById('statusIP').textContent = data.ip;
+        document.getElementById('statusPort').textContent = data.port;
+        document.getElementById('statusTime').textContent = data.hora;
+        document.getElementById('statusDate').textContent = data.data;
+        document.getElementById('statusFiles').textContent = data.arquivos;
+        document.getElementById('statusVideos').textContent = data.videos + ' 🎬';
+        document.getElementById('statusMusicas').textContent = data.musicas + ' 🎵';
+        document.getElementById('statusImagens').textContent = data.imagens + ' 🖼️';
         
-        const url = `http://${data.ip || '--'}:${data.port || '--'}`;
+        const url = `http://${data.ip}:${data.port}`;
         document.getElementById('statusUrl').textContent = url;
-        document.getElementById('manualIp').textContent = 'https://conexz-app.onrender.com';
+        document.getElementById('manualIp').textContent = url;
         
         const badge = document.getElementById('statusBadge');
         if (data.status === 'online') {
@@ -232,14 +106,35 @@ async function detectarIP() {
     try {
         const res = await fetch('/api/device');
         const data = await res.json();
+        
+        const ipDisplay = document.getElementById('ipDisplay');
+        const ipAddress = document.getElementById('ipAddress');
+        const ipPort = document.getElementById('ipPort');
+        
+        ipAddress.textContent = data.ip;
+        ipPort.textContent = data.port;
+        ipDisplay.classList.add('active');
+        
         mostrarStatus(`📡 IP: ${data.ip}:${data.port}`, 'info');
     } catch(e) {
         mostrarStatus('❌ Erro ao detectar IP', 'error');
     }
 }
 
+function copiarIP() {
+    const ip = document.getElementById('ipAddress').textContent;
+    const port = document.getElementById('ipPort').textContent;
+    const url = `http://${ip}:${port}`;
+    
+    navigator.clipboard.writeText(url).then(() => {
+        mostrarStatus('✅ IP copiado!', 'success');
+    }).catch(() => {
+        prompt('Copie o IP:', url);
+    });
+}
+
 // ==========================================
-// QR CODE CONEXÃO
+// QR CODE CONEXÃO (SIMPLIFICADO)
 // ==========================================
 
 async function gerarQRCodeConexao() {
@@ -268,7 +163,6 @@ async function gerarQRCodeConexao() {
             mostrarStatus('✅ QR Code gerado! Escaneie com o celular', 'success');
         }
     } catch(e) {
-        console.error('Erro:', e);
         mostrarStatus('❌ Erro ao gerar QR Code', 'error');
     }
 }
@@ -291,6 +185,7 @@ function copiarLinkConexao() {
 // ==========================================
 
 function setupEvents() {
+    // --- TABS ---
     document.querySelectorAll('.tab').forEach(item => {
         item.addEventListener('click', function() {
             document.querySelectorAll('.tab').forEach(i => i.classList.remove('active'));
@@ -307,6 +202,7 @@ function setupEvents() {
         });
     });
     
+    // --- UPLOAD ---
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     
@@ -337,8 +233,13 @@ function setupEvents() {
         });
     }
     
+    // --- QR CODE (header) ---
     document.getElementById('qrBtn').addEventListener('click', gerarQR);
+    
+    // --- IP ---
     document.getElementById('ipBtn').addEventListener('click', detectarIP);
+    
+    // --- ATUALIZAR ---
     document.getElementById('refreshBtn').addEventListener('click', () => {
         loadFiles();
         loadVideos();
@@ -347,8 +248,10 @@ function setupEvents() {
         carregarStatus();
     });
     
+    // --- BUSCAR ---
     document.getElementById('searchInput').addEventListener('input', filterFiles);
     
+    // --- MODO ESCURO ---
     document.getElementById('darkMode').addEventListener('change', function() {
         if (this.checked) {
             document.documentElement.style.setProperty('--bg-primary', '#f0f4f8');
@@ -371,6 +274,7 @@ function setupEvents() {
         }
     });
     
+    // --- TEMAS ---
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
@@ -380,6 +284,7 @@ function setupEvents() {
             currentTheme = color;
             document.documentElement.style.setProperty('--accent', color);
             
+            // Atualizar elementos com a nova cor
             document.querySelectorAll('.btn-primary').forEach(b => {
                 b.style.background = color;
             });
@@ -396,6 +301,7 @@ function setupEvents() {
         });
     });
     
+    // --- SOCKET ---
     socket.on('connect', () => {
         console.log('🔌 Conectado ao servidor');
         mostrarStatus('Conectado ao servidor', 'success');
@@ -419,6 +325,7 @@ function setupEvents() {
         carregarStatus();
     });
     
+    // --- AUDIO PROGRESS ---
     const progress = document.getElementById('audioProgress');
     if (progress) {
         progress.addEventListener('input', function() {
@@ -428,6 +335,7 @@ function setupEvents() {
         });
     }
     
+    // --- FECHAR MODAIS ---
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeVideoPlayer();
@@ -806,13 +714,17 @@ async function gerarQR() {
     container.innerHTML = '<p style="color:var(--text-secondary);">⏳ Gerando...</p>';
     
     try {
+        const deviceRes = await fetch('/api/device');
+        const deviceData = await deviceRes.json();
+        
         const res = await fetch('/api/qr');
         const data = await res.json();
+        
         container.innerHTML = `<img src="data:image/png;base64,${data.qr}">`;
-        urlEl.textContent = data.url || 'https://conexz-app.onrender.com';
+        urlEl.textContent = `http://${deviceData.ip}:${deviceData.port}`;
     } catch(e) {
         container.innerHTML = '<p style="color:#e53e3e;">❌ Erro ao gerar QR Code</p>';
-        urlEl.textContent = 'https://conexz-app.onrender.com';
+        urlEl.textContent = window.location.host;
     }
 }
 
@@ -868,29 +780,6 @@ async function deletarArquivo(id) {
 }
 
 // ==========================================
-// TEMAS
-// ==========================================
-
-function mudarTema(cor, btn) {
-    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.documentElement.style.setProperty('--accent', cor);
-    document.querySelectorAll('.btn-primary').forEach(b => {
-        b.style.background = cor;
-    });
-    document.querySelectorAll('.tab.active').forEach(t => {
-        t.style.background = cor;
-        t.style.borderColor = cor;
-    });
-    document.querySelectorAll('.badge').forEach(b => {
-        b.style.background = cor;
-    });
-    document.querySelectorAll('.logo-icon').forEach(l => {
-        l.style.background = cor;
-    });
-}
-
-// ==========================================
 // UTILITÁRIOS
 // ==========================================
 
@@ -939,49 +828,19 @@ window.gerarQR = gerarQR;
 window.fecharQR = fecharQR;
 window.copiarLink = copiarLink;
 window.detectarIP = detectarIP;
+window.copiarIP = copiarIP;
 window.atualizarStatus = atualizarStatus;
 window.copiarUrlStatus = copiarUrlStatus;
 window.gerarQRCodeConexao = gerarQRCodeConexao;
 window.copiarLinkConexao = copiarLinkConexao;
-window.mudarTema = mudarTema;
-window.togglePassword = togglePassword;
-window.login = login;
-window.register = register;
-window.logout = logout;
-window.showRegister = showRegister;
-window.showLogin = showLogin;
-
-// ==========================================
-// SERVICE WORKER
-// ==========================================
-
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('✅ Service Worker registrado!'))
-        .catch(err => console.log('❌ Service Worker erro:', err));
-}
 
 // ==========================================
 // INICIAR
 // ==========================================
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Verificar se o usuário já está logado
-    fetch('/api/auth/check')
-        .then(res => res.json())
-        .then(data => {
-            if (data.authenticated) {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                init();
-            }
-        })
-        .catch(() => {
-            // Se não estiver logado, mostra a tela de login
-            document.getElementById('loginScreen').style.display = 'flex';
-        });
-});
+document.addEventListener('DOMContentLoaded', init);
 
+// Limpar intervalos ao sair
 window.addEventListener('beforeunload', function() {
     if (statusInterval) clearInterval(statusInterval);
 });
