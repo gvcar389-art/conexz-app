@@ -1,687 +1,481 @@
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory, session
-from flask_socketio import SocketIO, emit
-from flask_cors import CORS
-import qrcode
-import io
-import base64
-import os
-import hashlib
-import time
-import socket
-import secrets
-import json
-from datetime import datetime, timedelta
-import glob
-from supabase import create_client, Client
-from dotenv import load_dotenv
+// ============================================
+// CONEXZ - FRONTEND CLIENT SCRIPT
+// ============================================
 
-# Carregar variáveis de ambiente
-load_dotenv()
+let currentUser = null;
+let filesDatabase = [];
+let socket = null;
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'conexz-secret')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+    initSocket();
+    checkAuthStatus();
+    detectDevice();
+    setupDragAndDrop();
+});
 
-# ==========================================
-# CONFIGURAR SUPABASE
-# ==========================================
+// ============================================
+// WEBSOCKET (SOCKET.IO)
+// ============================================
+function initSocket() {
+    socket = io({
+        query: { device_id: 'web_client_' + Math.random().toString(36.substring(7)) }
+    });
 
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+    socket.on('connect', () => {
+        console.log('🔗 Conectado ao servidor via Socket.IO');
+        updateConnectionBadge(true);
+    });
 
-supabase = None
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
-        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ Conectado ao Supabase!")
-    except Exception as e:
-        print(f"❌ Erro ao conectar Supabase: {e}")
-else:
-    print("⚠️ Supabase não configurado!")
+    socket.on('disconnect', () => {
+        console.log('❌ Desconectado do servidor');
+        updateConnectionBadge(false);
+    });
 
-# ==========================================
-# CONFIGURAÇÕES
-# ==========================================
+    socket.on('new_file', (data) => {
+        console.log('📂 Novo arquivo recebido:', data.name);
+        loadFiles(); // Atualiza lista
+    });
 
-UPLOAD_FOLDER = 'uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1GB
+    socket.on('file_deleted', (data) => {
+        console.log('🗑️ Arquivo deletado:', data.id);
+        loadFiles();
+    });
+}
 
-# Banco de dados local (fallback)
-db = {'files': {}, 'shared_links': {}, 'users': {}}
-device_id = secrets.token_hex(8)
+function updateConnectionBadge(isConnected) {
+    const badge = document.getElementById('connectionBadge');
+    if (badge) {
+        badge.textContent = isConnected ? 'Conectado' : 'Desconectado';
+        badge.className = isConnected ? 'status-badge online' : 'status-badge offline';
+    }
+}
 
-def get_local_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except:
-        return "127.0.0.1"
-
-def format_size(bytes):
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if bytes < 1024:
-            return f"{bytes:.1f} {unit}"
-        bytes /= 1024
-    return f"{bytes:.1f} TB"
-
-# ==========================================
-# ROTAS DO PWA
-# ==========================================
-
-@app.route('/manifest.json')
-def serve_manifest():
-    return send_from_directory('static', 'manifest.json')
-
-@app.route('/sw.js')
-def serve_sw():
-    return send_from_directory('static', 'sw.js')
-
-# ==========================================
-# AUTENTICAÇÃO
-# ==========================================
-
-@app.route('/api/auth/register', methods=['POST'])
-def register():
-    """Registrar novo usuário"""
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    username = data.get('username')
-    
-    if not email or not password or not username:
-        return jsonify({'error': 'Preencha todos os campos'}), 400
-    
-    if not supabase:
-        # Fallback local
-        if email in db['users']:
-            return jsonify({'error': 'Email já cadastrado'}), 400
-        db['users'][email] = {
-            'username': username,
-            'password': hashlib.md5(password.encode()).hexdigest(),
-            'created_at': time.time()
+// ============================================
+// AUTENTICAÇÃO (API)
+// ============================================
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/auth/user');
+        const data = await response.json();
+        
+        if (data.authenticated) {
+            currentUser = data;
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('displayUsername').textContent = data.username || data.email;
+            loadFiles();
+            loadServerStatus();
+        } else {
+            document.getElementById('loginScreen').style.display = 'flex';
         }
-        return jsonify({
-            'success': True,
-            'message': 'Usuário criado com sucesso!',
-            'user': {'email': email, 'username': username}
-        })
-    
-    try:
-        result = supabase.auth.sign_up({
-            'email': email,
-            'password': password,
-            'options': {
-                'data': {
-                    'username': username,
-                    'full_name': username
-                }
+    } catch (error) {
+        console.error('Erro ao verificar autenticação:', error);
+        document.getElementById('loginScreen').style.display = 'flex';
+    }
+}
+
+function switchAuthMode(mode) {
+    if (mode === 'register') {
+        document.getElementById('loginFormSection').style.display = 'none';
+        document.getElementById('registerFormSection').style.display = 'block';
+    } else {
+        document.getElementById('loginFormSection').style.display = 'block';
+        document.getElementById('registerFormSection').style.display = 'none';
+    }
+}
+
+function togglePasswordVisibility(fieldId, btn) {
+    const input = document.getElementById(fieldId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fa-solid fa-eye';
+    }
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginUsername').value.trim(); // No seu input adaptado para email/user
+    const password = document.getElementById('loginPassword').value;
+    const statusEl = 'loginStatus';
+
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+            showStatus(statusEl, 'Login realizado com sucesso!', 'success');
+            setTimeout(() => {
+                checkAuthStatus();
+            }, 800);
+        } else {
+            showStatus(statusEl, data.error || 'Erro ao fazer login', 'error');
+        }
+    } catch (err) {
+        showStatus(statusEl, 'Erro de conexão com o servidor', 'error');
+    }
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+    const username = document.getElementById('regUsername').value.trim();
+    // Se o campo de email não existir explicitamente no form de registro, criamos um padrão ou ajustamos o input
+    const email = username.includes('@') ? username : `${username.toLowerCase().replace(/\s+/g, '')}@conexz.local`;
+    const password = document.getElementById('regPassword').value;
+    const statusEl = 'registerStatus';
+
+    try {
+        const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, username, password })
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+            showStatus(statusEl, 'Conta criada! Faça login.', 'success');
+            setTimeout(() => {
+                switchAuthMode('login');
+            }, 1000);
+        } else {
+            showStatus(statusEl, data.error || 'Erro ao cadastrar', 'error');
+        }
+    } catch (err) {
+        showStatus(statusEl, 'Erro de conexão com o servidor', 'error');
+    }
+}
+
+async function handleLogout() {
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        currentUser = null;
+        checkAuthStatus();
+    } catch (err) {
+        console.error('Erro ao sair:', err);
+    }
+}
+
+function showStatus(elementId, message, type) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.textContent = message;
+        el.className = `login-status ${type}`;
+    }
+}
+
+// ============================================
+// GERENCIAMENTO DE ARQUIVOS (API)
+// ============================================
+async function loadFiles() {
+    try {
+        const response = await fetch('/api/files');
+        if (response.ok) {
+            filesDatabase = await response.json();
+            renderFiles();
+        }
+    } catch (err) {
+        console.error('Erro ao carregar arquivos:', err);
+    }
+}
+
+async function loadServerStatus() {
+    try {
+        const response = await fetch('/api/status-completo');
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('localIpStatus').textContent = data.ip;
+            document.getElementById('storageUsed').textContent = `${data.arquivos * 2.5} MB (Estimado)`;
+            document.getElementById('fileCountBadge').textContent = `${data.arquivos} arquivos`;
+        }
+    } catch (err) {
+        console.error('Erro ao buscar status:', err);
+    }
+}
+
+// Upload via Drag and Drop ou Input
+function setupDragAndDrop() {
+    const dropZone = document.getElementById('dropZone');
+    if (!dropZone) return;
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        uploadFiles(files);
+    });
+}
+
+function handleFileSelect(input) {
+    if (input.files && input.files.length > 0) {
+        uploadFiles(input.files);
+    }
+}
+
+async function uploadFiles(files) {
+    const progressContainer = document.getElementById('progressContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+    progressContainer.style.display = 'flex';
+    uploadStatus.className = 'status';
+
+    let totalFiles = files.length;
+    let uploadedCount = 0;
+
+    for (let i = 0; i < totalFiles; i++) {
+        const formData = new FormData();
+        formData.append('file', files[i]);
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                uploadedCount++;
+                let pct = Math.round((uploadedCount / totalFiles) * 100);
+                progressFill.style.width = pct + '%';
+                progressText.textContent = pct + '%';
             }
-        })
-        
-        if result.user:
-            return jsonify({
-                'success': True,
-                'message': 'Usuário criado com sucesso!',
-                'user': {
-                    'id': result.user.id,
-                    'email': result.user.email,
-                    'username': username
-                }
-            })
-        else:
-            return jsonify({'error': 'Erro ao criar usuário'}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
-
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-    """Login do usuário"""
-    data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
-    
-    if not email or not password:
-        return jsonify({'error': 'Preencha todos os campos'}), 400
-    
-    if not supabase:
-        # Fallback local
-        if email not in db['users']:
-            return jsonify({'error': 'Email ou senha incorretos'}), 401
-        user = db['users'][email]
-        if user['password'] != hashlib.md5(password.encode()).hexdigest():
-            return jsonify({'error': 'Email ou senha incorretos'}), 401
-        session['user_id'] = email
-        session['user_email'] = email
-        session['user_username'] = user['username']
-        session.permanent = True
-        return jsonify({
-            'success': True,
-            'message': 'Login realizado!',
-            'user': {'email': email, 'username': user['username']}
-        })
-    
-    try:
-        result = supabase.auth.sign_in_with_password({
-            'email': email,
-            'password': password
-        })
-        
-        if result.user:
-            session['user_id'] = result.user.id
-            session['user_email'] = result.user.email
-            session['user_username'] = result.user.user_metadata.get('username', 'Usuário')
-            session.permanent = True
-            
-            return jsonify({
-                'success': True,
-                'message': 'Login realizado com sucesso!',
-                'user': {
-                    'id': result.user.id,
-                    'email': result.user.email,
-                    'username': result.user.user_metadata.get('username', 'Usuário')
-                }
-            })
-        else:
-            return jsonify({'error': 'Email ou senha incorretos'}), 401
-    except Exception as e:
-        return jsonify({'error': str(e)}), 401
-
-@app.route('/api/auth/logout', methods=['POST'])
-def logout():
-    """Logout do usuário"""
-    session.clear()
-    return jsonify({'success': True, 'message': 'Logout realizado'})
-
-@app.route('/api/auth/user')
-def get_user():
-    """Buscar usuário atual"""
-    if 'user_id' in session:
-        return jsonify({
-            'id': session['user_id'],
-            'email': session.get('user_email'),
-            'username': session.get('user_username', 'Usuário'),
-            'authenticated': True
-        })
-    return jsonify({'authenticated': False}), 401
-
-@app.route('/api/auth/check')
-def check_auth():
-    """Verificar se o usuário está autenticado"""
-    if 'user_id' in session:
-        return jsonify({'authenticated': True, 'user_id': session['user_id']})
-    return jsonify({'authenticated': False})
-
-# ==========================================
-# ARQUIVOS POR USUÁRIO
-# ==========================================
-
-def get_user_id():
-    """Pega o ID do usuário atual"""
-    if 'user_id' in session:
-        return session['user_id']
-    return 'anonymous'
-
-def save_file_to_db(file_id, filename, file_path, file_size, user_id=None):
-    """Salva arquivo no Supabase ou local"""
-    if not user_id:
-        user_id = get_user_id()
-    
-    if not supabase:
-        db['files'][file_id] = {
-            'id': file_id,
-            'name': filename,
-            'path': file_path,
-            'size': file_size,
-            'size_formatted': format_size(file_size),
-            'date': time.time(),
-            'date_formatted': datetime.now().strftime('%d/%m/%Y %H:%M'),
-            'user_id': user_id,
-            'shared': False
+        } catch (err) {
+            console.error('Erro no upload:', err);
         }
-        return True
-    
-    try:
-        data = {
-            'file_id': file_id,
-            'filename': filename,
-            'file_path': file_path,
-            'file_size': file_size,
-            'user_id': user_id,
-            'shared': False,
-            'created_at': datetime.now().isoformat()
-        }
-        supabase.table('files').insert(data).execute()
-        return True
-    except Exception as e:
-        print(f"❌ Erro ao salvar: {e}")
-        # Fallback local
-        db['files'][file_id] = {
-            'id': file_id,
-            'name': filename,
-            'path': file_path,
-            'size': file_size,
-            'size_formatted': format_size(file_size),
-            'date': time.time(),
-            'date_formatted': datetime.now().strftime('%d/%m/%Y %H:%M'),
-            'user_id': user_id,
-            'shared': False
-        }
-        return False
-
-def get_files_from_db(user_id=None):
-    """Busca arquivos do Supabase ou local"""
-    if not user_id:
-        user_id = get_user_id()
-    
-    if not supabase:
-        files = []
-        for file_id, info in db['files'].items():
-            if info.get('user_id') == user_id:
-                files.append({
-                    'id': file_id,
-                    'name': info['name'],
-                    'size': info['size'],
-                    'size_formatted': info['size_formatted'],
-                    'date': info['date_formatted'],
-                    'shared': info.get('shared', False)
-                })
-        return files
-    
-    try:
-        result = supabase.table('files').select('*').eq('user_id', user_id).execute()
-        files = []
-        for item in result.data:
-            files.append({
-                'id': item['file_id'],
-                'name': item['filename'],
-                'size': item['file_size'],
-                'size_formatted': format_size(item['file_size']),
-                'date': item['created_at'],
-                'shared': item.get('shared', False)
-            })
-        return files
-    except Exception as e:
-        print(f"❌ Erro ao buscar: {e}")
-        # Fallback local
-        files = []
-        for file_id, info in db['files'].items():
-            if info.get('user_id') == user_id:
-                files.append({
-                    'id': file_id,
-                    'name': info['name'],
-                    'size': info['size'],
-                    'size_formatted': info['size_formatted'],
-                    'date': info['date_formatted'],
-                    'shared': info.get('shared', False)
-                })
-        return files
-
-def get_file_path(file_id):
-    """Busca caminho do arquivo"""
-    if file_id in db['files']:
-        return db['files'][file_id]['path']
-    
-    if supabase:
-        try:
-            result = supabase.table('files').select('file_path').eq('file_id', file_id).execute()
-            if result.data:
-                return result.data[0]['file_path']
-        except:
-            pass
-    
-    # Buscar na pasta uploads
-    files = glob.glob(f"uploads/{file_id}_*")
-    if files:
-        return files[0]
-    
-    return None
-
-def delete_file_from_db(file_id):
-    """Deleta arquivo do Supabase ou local"""
-    if file_id in db['files']:
-        del db['files'][file_id]
-    
-    if supabase:
-        try:
-            supabase.table('files').delete().eq('file_id', file_id).execute()
-            return True
-        except:
-            pass
-    return False
-
-def get_file_owner(file_id):
-    """Pega o dono do arquivo"""
-    if file_id in db['files']:
-        return db['files'][file_id].get('user_id')
-    
-    if supabase:
-        try:
-            result = supabase.table('files').select('user_id').eq('file_id', file_id).execute()
-            if result.data:
-                return result.data[0]['user_id']
-        except:
-            pass
-    return None
-
-# ==========================================
-# ROTAS DA API
-# ==========================================
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/api/device')
-def device():
-    return jsonify({
-        'id': device_id,
-        'ip': get_local_ip(),
-        'port': 5001
-    })
-
-@app.route('/api/qr')
-def generate_qr():
-    """Gera QR Code com a URL pública do Render"""
-    url = "https://conexz-app.onrender.com"
-    
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(url)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    buffered = io.BytesIO()
-    img.save(buffered, format="PNG")
-    qr_base64 = base64.b64encode(buffered.getvalue()).decode()
-    
-    return jsonify({
-        'qr': qr_base64,
-        'url': url
-    })
-
-@app.route('/api/upload', methods=['POST'])
-def upload():
-    """Upload de arquivo para o usuário"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
-    
-    user_id = session['user_id']
-    
-    if 'file' not in request.files:
-        return jsonify({'error': 'Nenhum arquivo'}), 400
-    
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'Nome vazio'}), 400
-    
-    file_id = hashlib.md5(file.filename.encode() + str(time.time()).encode()).hexdigest()
-    file_path = os.path.join(UPLOAD_FOLDER, f"{file_id}_{file.filename}")
-    file.save(file_path)
-    size = os.path.getsize(file_path)
-    
-    save_file_to_db(file_id, file.filename, file_path, size, user_id)
-    
-    socketio.emit('new_file', {
-        'id': file_id,
-        'name': file.filename,
-        'size': format_size(size),
-        'user_id': user_id
-    })
-    
-    return jsonify({
-        'id': file_id,
-        'name': file.filename,
-        'size': size,
-        'size_formatted': format_size(size),
-        'message': '✅ Arquivo enviado com sucesso!'
-    })
-
-@app.route('/api/files')
-def list_files():
-    """Listar arquivos do usuário"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
-    
-    user_id = session['user_id']
-    files = get_files_from_db(user_id)
-    return jsonify(files)
-
-@app.route('/api/view/<file_id>')
-def view_file(file_id):
-    """Visualizar arquivo"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
-    
-    file_path = get_file_path(file_id)
-    if not file_path:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    if not os.path.exists(file_path):
-        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
-    
-    filename = os.path.basename(file_path)
-    if '_' in filename:
-        filename = filename.split('_', 1)[1]
-    
-    ext = filename.split('.')[-1].lower() if '.' in filename else ''
-    
-    mimetypes = {
-        'mp4': 'video/mp4',
-        'webm': 'video/webm',
-        'mp3': 'audio/mpeg',
-        'wav': 'audio/wav',
-        'ogg': 'audio/ogg',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'gif': 'image/gif',
-        'pdf': 'application/pdf',
-        'txt': 'text/plain',
-        'json': 'application/json',
-        'zip': 'application/zip'
     }
-    mimetype = mimetypes.get(ext, 'application/octet-stream')
-    
-    return send_file(file_path, mimetype=mimetype)
 
-@app.route('/api/download/<file_id>')
-def download_file(file_id):
-    """Baixar arquivo"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
+    uploadStatus.textContent = 'Upload concluído com sucesso!';
+    uploadStatus.className = 'status success';
     
-    file_path = get_file_path(file_id)
-    if not file_path:
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    if not os.path.exists(file_path):
-        return jsonify({'error': 'Arquivo não encontrado no servidor'}), 404
-    
-    filename = os.path.basename(file_path)
-    if '_' in filename:
-        filename = filename.split('_', 1)[1]
-    
-    return send_file(
-        file_path,
-        as_attachment=True,
-        download_name=filename
-    )
+    setTimeout(() => {
+        progressContainer.style.display = 'none';
+        progressFill.style.width = '0%';
+        uploadStatus.textContent = '';
+        loadFiles();
+        loadServerStatus();
+    }, 1500);
+}
 
-@app.route('/api/share-link/<file_id>')
-def share_file(file_id):
-    """Criar link compartilhável"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
-    
-    if not get_file_path(file_id):
-        return jsonify({'error': 'Arquivo não encontrado'}), 404
-    
-    token = secrets.token_urlsafe(12)
-    share_url = f"{request.host_url}api/s/{token}"
-    
-    db['shared_links'][token] = {
-        'file_id': file_id,
-        'expires': time.time() + 86400  # 24 horas
+// Renderização na Interface
+function renderFiles() {
+    const container = document.getElementById('fileListContainer');
+    const mediaContainer = document.getElementById('mediaGridContainer');
+    const fileTabBadge = document.getElementById('fileTabBadge');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+
+    if (!container) return;
+
+    fileTabBadge.textContent = filesDatabase.length;
+    clearAllBtn.style.display = filesDatabase.length > 0 ? 'inline-flex' : 'none';
+
+    if (filesDatabase.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fa-solid fa-folder-open"></i>
+                <p>Nenhum arquivo encontrado.</p>
+            </div>
+        `;
+        mediaContainer.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <i class="fa-solid fa-photo-film"></i>
+                <p>Nenhuma mídia encontrada.</p>
+            </div>
+        `;
+        return;
     }
-    
-    return jsonify({
-        'link': share_url,
-        'expires': time.time() + 86400,
-        'token': token
-    })
 
-@app.route('/api/s/<token>')
-def shared_access(token):
-    """Acessar link compartilhável"""
-    if token not in db['shared_links']:
-        return jsonify({'error': 'Link inválido'}), 404
-    
-    link = db['shared_links'][token]
-    if time.time() > link['expires']:
-        del db['shared_links'][token]
-        return jsonify({'error': 'Link expirado'}), 410
-    
-    return download_file(link['file_id'])
+    // Lista de arquivos
+    container.innerHTML = filesDatabase.map(file => `
+        <div class="file-item" data-name="${file.name.toLowerCase()}">
+            <div class="file-info">
+                <i class="${getFileIcon(file.name)}"></i>
+                <div class="file-details">
+                    <div class="file-name" title="${file.name}">${file.name}</div>
+                    <div class="file-meta">${file.size_formatted || 'Desconhecido'} • ${file.date || ''}</div>
+                </div>
+            </div>
+            <div class="file-actions">
+                <button class="btn btn-primary btn-sm" onclick="downloadFile('${file.id}')">
+                    <i class="fa-solid fa-download"></i> Baixar
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="shareFile('${file.id}')" title="Compartilhar Link">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteFile('${file.id}')" title="Excluir">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
 
-@app.route('/api/delete/<file_id>', methods=['DELETE'])
-def delete_file(file_id):
-    """Deletar arquivo"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Faça login primeiro'}), 401
-    
-    user_id = session['user_id']
-    
-    # Verificar se o arquivo pertence ao usuário
-    owner = get_file_owner(file_id)
-    if owner and owner != user_id:
-        return jsonify({'error': 'Você não tem permissão para deletar este arquivo'}), 403
-    
-    file_path = get_file_path(file_id)
-    if file_path and os.path.exists(file_path):
-        os.remove(file_path)
-    
-    delete_file_from_db(file_id)
-    
-    socketio.emit('file_deleted', {'id': file_id})
-    return jsonify({'message': '🗑️ Arquivo deletado'})
+    // Galeria de Mídia
+    const mediaFiles = filesDatabase.filter(f => {
+        const name = f.name.toLowerCase();
+        return name.match(/\.(jpg|jpeg|png|gif|webp|mp4|webm|mp3|wav)$/);
+    });
 
-@app.route('/api/status')
-def status():
-    """Status do servidor"""
-    if 'user_id' in session:
-        user_id = session['user_id']
-        files = get_files_from_db(user_id)
-        return jsonify({
-            'status': 'online',
-            'device': device_id,
-            'ip': get_local_ip(),
-            'port': 5001,
-            'files': len(files),
-            'authenticated': True
-        })
-    return jsonify({
-        'status': 'online',
-        'device': device_id,
-        'ip': get_local_ip(),
-        'port': 5001,
-        'authenticated': False
-    })
+    if (mediaFiles.length === 0) {
+        mediaContainer.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <i class="fa-solid fa-photo-film"></i>
+                <p>Nenhuma imagem, vídeo ou áudio encontrado.</p>
+            </div>
+        `;
+    } else {
+        mediaContainer.innerHTML = mediaFiles.map(file => `
+            <div class="media-card" onclick="openMediaItem('${file.id}', '${file.name}')">
+                <div class="media-preview">
+                    <i class="${getFileIcon(file.name)}"></i>
+                </div>
+                <div class="media-info">
+                    <div class="media-title" title="${file.name}">${file.name}</div>
+                    <div class="media-meta">${file.size_formatted || ''}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+}
 
-@app.route('/api/status-completo')
-def status_completo():
-    """Status completo com IP, hora e contagem de arquivos"""
-    now = datetime.now()
-    
-    if 'user_id' in session:
-        user_id = session['user_id']
-        files = get_files_from_db(user_id)
-    else:
-        files = []
-    
-    videos = 0
-    musicas = 0
-    imagens = 0
-    documentos = 0
-    
-    for file in files:
-        name = file['name'].lower()
-        if name.endswith(('.mp4', '.webm', '.mov', '.mkv', '.avi')):
-            videos += 1
-        elif name.endswith(('.mp3', '.wav', '.ogg', '.flac', '.m4a')):
-            musicas += 1
-        elif name.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp')):
-            imagens += 1
-        elif name.endswith(('.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt')):
-            documentos += 1
-    
-    return jsonify({
-        'ip': get_local_ip(),
-        'port': 5001,
-        'data': now.strftime('%d/%m/%Y'),
-        'hora': now.strftime('%H:%M:%S'),
-        'dispositivo': device_id[:8],
-        'arquivos': len(files),
-        'videos': videos,
-        'musicas': musicas,
-        'imagens': imagens,
-        'documentos': documentos,
-        'status': 'online',
-        'authenticated': 'user_id' in session
-    })
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'fa-solid fa-file-image';
+    if (['mp4', 'webm', 'mov', 'mkv'].includes(ext)) return 'fa-solid fa-file-video';
+    if (['mp3', 'wav', 'ogg', 'flac'].includes(ext)) return 'fa-solid fa-file-audio';
+    if (ext === 'pdf') return 'fa-solid fa-file-pdf';
+    if (['zip', 'rar', '7z', 'tar'].includes(ext)) return 'fa-solid fa-file-zipper';
+    return 'fa-solid fa-file-lines';
+}
 
-# ==========================================
-# SOCKET.IO EVENTOS
-# ==========================================
+function downloadFile(id) {
+    window.location.href = `/api/download/${id}`;
+}
 
-@socketio.on('connect')
-def handle_connect():
-    device_id = request.args.get('device_id')
-    if device_id:
-        emit('device_connected', {'device_id': device_id}, broadcast=True)
-        print(f"📱 Dispositivo conectado: {device_id[:8]}...")
+async function shareFile(id) {
+    try {
+        const res = await fetch(`/api/share-link/${id}`);
+        const data = await res.json();
+        if (data.link) {
+            navigator.clipboard.writeText(data.link);
+            alert('🔗 Link de compartilhamento (válido por 24h) copiado para a área de transferência!');
+        }
+    } catch (err) {
+        alert('Erro ao gerar link de compartilhamento.');
+    }
+}
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    device_id = request.args.get('device_id')
-    if device_id:
-        emit('device_disconnected', {'device_id': device_id}, broadcast=True)
-        print(f"📱 Dispositivo desconectado: {device_id[:8]}...")
-
-# ==========================================
-# INICIAR SERVIDOR
-# ==========================================
-
-if __name__ == '__main__':
-    port = 5001
-    ip = get_local_ip()
+async function deleteFile(id) {
+    if (!confirm('Deseja realmente excluir este arquivo?')) return;
     
-    print("""
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║   📱 CONEXZ - TRANSFERÊNCIA INTELIGENTE (PROFISSIONAL)      ║
-    ╠═══════════════════════════════════════════════════════════════╣
-    ║  🌐  LOCAL:    http://localhost:{}                           ║
-    ║  📱  CELULAR:  http://{}:{}                ║
-    ║  📱  DISPOSITIVO: {}                                     ║
-    ║  🔐  SEGURANÇA: Login com email                            ║
-    ║  💾  ARQUIVOS: Por usuário                                  ║
-    ║  📷  QR CODE:  https://conexz-app.onrender.com              ║
-    ╚═══════════════════════════════════════════════════════════════╝
-    """.format(port, ip, port, device_id[:8]))
+    try {
+        const res = await fetch(`/api/delete/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            loadFiles();
+            loadServerStatus();
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Erro ao deletar');
+        }
+    } catch (err) {
+        console.error('Erro ao deletar:', err);
+    }
+}
+
+async function clearAllFiles() {
+    if (!confirm('Deseja excluir todos os arquivos listados?')) return;
+    for (let file of filesDatabase) {
+        await fetch(`/api/delete/${file.id}`, { method: 'DELETE' });
+    }
+    loadFiles();
+    loadServerStatus();
+}
+
+function filterFiles() {
+    const query = document.getElementById('fileSearch').value.toLowerCase();
+    document.querySelectorAll('.file-item').forEach(item => {
+        const name = item.getAttribute('data-name');
+        item.style.display = name.includes(query) ? 'flex' : 'none';
+    });
+}
+
+// Navegação de Abas
+function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+    event.currentTarget.classList.add('active');
+    document.getElementById(tabName + 'Tab').classList.add('active');
+
+    if (tabName === 'files' || tabName === 'media') {
+        loadFiles();
+    }
+}
+
+// Utilitários de UI (QR code, Tema, etc)
+async function openQrModal() {
+    const modal = document.getElementById('qrModal');
+    const qrDisplay = document.getElementById('qrCodeDisplay');
+    const urlText = document.getElementById('modalUrlText');
     
-    print(f"\n📱 NO CELULAR DIGITE: http://{ip}:{port}")
-    print("🔐 Faça login para acessar seus arquivos")
-    print("📷 QR Code: https://conexz-app.onrender.com\n")
-    
-    socketio.run(
-        app,
-        host='0.0.0.0',
-        port=port,
-        debug=True,
-        allow_unsafe_werkzeug=True
-    )
+    modal.classList.add('active');
+    try {
+        const res = await fetch('/api/qr');
+        const data = await res.json();
+        qrDisplay.innerHTML = `<img src="data:image/png;base64,${data.qr}" alt="QR Code" style="width:180px;height:180px;">`;
+        urlText.textContent = data.url;
+    } catch (err) {
+        qrDisplay.innerHTML = '<p>Erro ao gerar QR Code</p>';
+    }
+}
+
+function closeQrModal() {
+    document.getElementById('qrModal').classList.remove('active');
+}
+
+function copyAppUrl() {
+    const urlText = document.getElementById('modalUrlText').textContent;
+    navigator.clipboard.writeText(urlText);
+    alert('Link do aplicativo copiado!');
+}
+
+function setTheme(color) {
+    document.documentElement.style.setProperty('--accent', color);
+    document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    localStorage.setItem('conexz_theme', color);
+}
+
+// Carregar tema salvo localmente
+const savedTheme = localStorage.getItem('conexz_theme');
+if (savedTheme) {
+    document.documentElement.style.setProperty('--accent', savedTheme);
+}
+
+function detectDevice() {
+    const badge = document.getElementById('deviceTypeBadge');
+    if (!badge) return;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    badge.innerHTML = isMobile ? '<i class="fa-solid fa-mobile-screen"></i> Celular' : '<i class="fa-solid fa-desktop"></i> Desktop';
+}
+
+function showAboutInfo() {
+    alert('ConexZ v2.5.0 - Sistema P2P e Cloud Sync integrado com Supabase e Flask.');
+}
