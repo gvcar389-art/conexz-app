@@ -43,138 +43,6 @@
         
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         
-        /* ===== TELA DE LOGIN ===== */
-        .login-screen {
-            position: fixed;
-            inset: 0;
-            background: var(--bg-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            backdrop-filter: blur(20px);
-        }
-        .login-container {
-            background: var(--bg-secondary);
-            border-radius: var(--radius);
-            padding: 48px 40px;
-            width: 100%;
-            max-width: 420px;
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
-            text-align: center;
-        }
-        .login-logo {
-            margin-bottom: 32px;
-        }
-        .login-logo i {
-            font-size: 56px;
-            color: var(--accent);
-            margin-bottom: 12px;
-        }
-        .login-logo h1 {
-            font-size: 32px;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--accent), #fff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .login-logo p {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-top: 4px;
-        }
-        .login-container h2 {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: var(--text-primary);
-        }
-        .login-container input {
-            width: 100%;
-            padding: 14px 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 14px;
-            font-family: inherit;
-            transition: var(--transition);
-            margin-bottom: 12px;
-        }
-        .login-container input:focus {
-            border-color: var(--accent);
-            outline: none;
-            box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
-        }
-        .login-container input::placeholder {
-            color: var(--text-muted);
-        }
-        .login-container .btn {
-            width: 100%;
-            justify-content: center;
-            padding: 14px;
-            font-size: 16px;
-            margin-top: 8px;
-        }
-        .login-link {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin-top: 16px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-        .login-link:hover {
-            color: var(--accent);
-        }
-        .login-status {
-            margin-top: 12px;
-            padding: 10px 14px;
-            border-radius: 10px;
-            font-size: 14px;
-            display: none;
-        }
-        .login-status.success {
-            display: block;
-            background: rgba(72,187,120,0.15);
-            border: 1px solid #48bb78;
-            color: #48bb78;
-        }
-        .login-status.error {
-            display: block;
-            background: rgba(229,62,62,0.15);
-            border: 1px solid #fc8181;
-            color: #fc8181;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 16px 8px 20px;
-            background: var(--bg-card);
-            border-radius: 20px;
-            border: 1px solid var(--border);
-        }
-        .user-info .username {
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-        .user-info .logout-btn {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 14px;
-            padding: 4px 8px;
-            border-radius: 8px;
-            transition: var(--transition);
-        }
-        .user-info .logout-btn:hover {
-            color: #fc8181;
-            background: rgba(229,62,62,0.1);
-        }
-        
         /* ===== HEADER ===== */
         header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--bg-secondary); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 24px; box-shadow: var(--shadow); flex-wrap: wrap; gap: 12px; }
         .logo { display: flex; align-items: center; gap: 16px; }
@@ -426,7 +294,6 @@
             .audio-info { min-width: 100%; text-align: center; }
             .audio-controls { width: 100%; }
             .modal-content { padding: 20px; }
-            .login-container { padding: 32px 24px; }
         }
         @media (max-width: 480px) {
             .container { padding: 10px; }
@@ -437,43 +304,9 @@
 </head>
 <body>
     <!-- ==========================================
-    TELA DE LOGIN
+    CONTEÚDO PRINCIPAL (sempre visível)
     ========================================== -->
-    <div class="login-screen" id="loginScreen">
-        <div class="login-container">
-            <div class="login-logo">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <h1>ConexZ</h1>
-                <p>Transferência Inteligente</p>
-            </div>
-            
-            <!-- FORMULÁRIO DE LOGIN -->
-            <div id="loginForm">
-                <h2>Entrar</h2>
-                <input type="email" id="loginEmail" placeholder="Seu email" autocomplete="email">
-                <input type="password" id="loginPassword" placeholder="Sua senha" autocomplete="current-password">
-                <button onclick="login()" class="btn btn-primary">Entrar</button>
-                <p class="login-link" onclick="showRegister()">Não tem conta? <strong>Cadastre-se</strong></p>
-                <div id="loginStatus" class="login-status"></div>
-            </div>
-            
-            <!-- FORMULÁRIO DE CADASTRO -->
-            <div id="registerForm" style="display:none;">
-                <h2>Criar Conta</h2>
-                <input type="text" id="registerUsername" placeholder="Nome de usuário">
-                <input type="email" id="registerEmail" placeholder="Seu email">
-                <input type="password" id="registerPassword" placeholder="Sua senha">
-                <button onclick="register()" class="btn btn-primary">Cadastrar</button>
-                <p class="login-link" onclick="showLogin()">Já tem conta? <strong>Faça login</strong></p>
-                <div id="registerStatus" class="login-status"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==========================================
-    CONTEÚDO PRINCIPAL (só aparece após login)
-    ========================================== -->
-    <div class="container" id="mainContent" style="display:none;">
+    <div class="container" id="mainContent">
         <!-- HEADER -->
         <header>
             <div class="logo">
@@ -484,13 +317,6 @@
                 </div>
             </div>
             <div class="header-actions">
-                <div class="user-info">
-                    <i class="fas fa-user" style="color:var(--accent);"></i>
-                    <span class="username" id="userNameDisplay">Usuário</span>
-                    <button class="logout-btn" onclick="logout()" title="Sair">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
-                </div>
                 <span class="device-badge" id="deviceId"><i class="fas fa-qrcode"></i> ID: ...</span>
                 <button class="btn btn-secondary" id="ipBtn"><i class="fas fa-wifi"></i> IP</button>
                 <button class="btn btn-primary" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</button>
@@ -747,121 +573,6 @@
     <!-- SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        // =============================================
-        // AUTENTICAÇÃO
-        // =============================================
-
-        async function login() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            const status = document.getElementById('loginStatus');
-            
-            if (!email || !password) {
-                status.textContent = '❌ Preencha todos os campos';
-                status.className = 'login-status error';
-                return;
-            }
-            
-            try {
-                const res = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    status.textContent = '✅ Login realizado!';
-                    status.className = 'login-status success';
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('mainContent').style.display = 'block';
-                    
-                    // Mostrar nome do usuário
-                    if (data.user && data.user.username) {
-                        document.getElementById('userNameDisplay').textContent = data.user.username;
-                    }
-                    
-                    init(); // Iniciar o app
-                } else {
-                    status.textContent = '❌ ' + data.error;
-                    status.className = 'login-status error';
-                }
-            } catch(e) {
-                status.textContent = '❌ Erro ao fazer login';
-                status.className = 'login-status error';
-                console.error(e);
-            }
-        }
-
-        async function register() {
-            const username = document.getElementById('registerUsername').value;
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            const status = document.getElementById('registerStatus');
-            
-            if (!username || !email || !password) {
-                status.textContent = '❌ Preencha todos os campos';
-                status.className = 'login-status error';
-                return;
-            }
-            
-            try {
-                const res = await fetch('/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, email, password })
-                });
-                const data = await res.json();
-                
-                if (data.success) {
-                    status.textContent = '✅ Cadastro realizado! Faça login.';
-                    status.className = 'login-status success';
-                    setTimeout(() => {
-                        showLogin();
-                        document.getElementById('loginEmail').value = email;
-                    }, 1500);
-                } else {
-                    status.textContent = '❌ ' + data.error;
-                    status.className = 'login-status error';
-                }
-            } catch(e) {
-                status.textContent = '❌ Erro ao cadastrar';
-                status.className = 'login-status error';
-                console.error(e);
-            }
-        }
-
-        async function logout() {
-            try {
-                await fetch('/api/auth/logout', { method: 'POST' });
-                document.getElementById('mainContent').style.display = 'none';
-                document.getElementById('loginScreen').style.display = 'flex';
-                document.getElementById('loginStatus').textContent = '';
-                document.getElementById('loginStatus').className = 'login-status';
-                console.log('✅ Logout realizado');
-            } catch(e) {
-                console.error('❌ Erro no logout:', e);
-            }
-        }
-
-        function showRegister() {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('registerForm').style.display = 'block';
-            document.getElementById('loginStatus').textContent = '';
-            document.getElementById('loginStatus').className = 'login-status';
-            document.getElementById('registerStatus').textContent = '';
-            document.getElementById('registerStatus').className = 'login-status';
-        }
-
-        function showLogin() {
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('registerForm').style.display = 'none';
-            document.getElementById('loginStatus').textContent = '';
-            document.getElementById('loginStatus').className = 'login-status';
-            document.getElementById('registerStatus').textContent = '';
-            document.getElementById('registerStatus').className = 'login-status';
-        }
-
         // =============================================
         // CONEXZ - SCRIPT COMPLETO
         // =============================================
@@ -1446,12 +1157,8 @@
         window.atualizarStatus = atualizarStatus;
         window.copiarUrlStatus = copiarUrlStatus;
         window.gerarQRCodeConexao = gerarQRCodeConexao;
-        window.login = login;
-        window.register = register;
-        window.logout = logout;
-        window.showRegister = showRegister;
-        window.showLogin = showLogin;
 
+        // INICIAR
         document.addEventListener('DOMContentLoaded', init);
 
         window.addEventListener('beforeunload', function() {
