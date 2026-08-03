@@ -21,7 +21,7 @@
            RESET E CONFIGURAÇÕES GERAIS
            ============================================ */
         
-       * { margin:0; padding:0; box-sizing:border-box; }
+        * { margin:0; padding:0; box-sizing:border-box; }
         :root {
             --bg-primary: #0a0a1a;
             --bg-secondary: #12122a;
@@ -43,7 +43,7 @@
         
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         
-        /* HEADER */
+        /* ===== HEADER ===== */
         header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--bg-secondary); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 24px; box-shadow: var(--shadow); flex-wrap: wrap; gap: 12px; }
         .logo { display: flex; align-items: center; gap: 16px; }
         .logo-icon { width: 48px; height: 48px; background: var(--accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; }
@@ -62,7 +62,7 @@
         .btn-danger:hover { background: #c53030; }
         .btn-sm { padding: 6px 12px; font-size: 12px; }
         
-        /* STATUS PANEL */
+        /* ===== STATUS PANEL ===== */
         .status-panel {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
@@ -141,37 +141,7 @@
         }
         .status-actions { display: flex; gap: 8px; }
         
-        /* IP DISPLAY */
-        .ip-display {
-            background: var(--bg-card);
-            border: 1px solid var(--accent);
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-top: 12px;
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-        .ip-display.active { display: block; }
-        .ip-display .ip-title {
-            font-size: 12px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .ip-display .ip-address {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--accent);
-            margin: 4px 0;
-            word-break: break-all;
-        }
-        .ip-display .ip-port {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        .ip-display .ip-copy { margin-top: 8px; }
-        
-        /* TABS */
+        /* ===== TABS ===== */
         .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { padding: 10px 20px; border-radius: 12px; cursor: pointer; background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary); transition: var(--transition); font-size: 14px; font-weight: 500; }
         .tab:hover { border-color: var(--accent); color: #fff; }
@@ -184,7 +154,7 @@
         .tab-content h2 { margin-bottom: 24px; font-weight: 600; display: flex; align-items: center; gap: 12px; font-size: 20px; }
         .tab-content h2 i { color: var(--accent); }
         
-        /* UPLOAD */
+        /* ===== UPLOAD ===== */
         .upload-area { border: 3px dashed var(--border); border-radius: var(--radius); padding: 60px 40px; text-align: center; cursor: pointer; transition: var(--transition); background: var(--bg-primary); }
         .upload-area:hover { border-color: var(--accent); background: var(--bg-card); }
         .upload-area.dragover { border-color: var(--accent); background: var(--bg-card); transform: scale(1.02); }
@@ -199,7 +169,7 @@
         .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; border-radius: 10px; }
         #progressText { font-size: 14px; color: var(--text-secondary); min-width: 40px; }
         
-        /* FILE LIST */
+        /* ===== FILE LIST ===== */
         .file-toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
         .search-box { flex: 1; display: flex; align-items: center; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 12px; padding: 0 16px; transition: var(--transition); min-width: 150px; }
         .search-box:focus-within { border-color: var(--accent); }
@@ -216,7 +186,7 @@
         .file-meta { font-size: 12px; color: var(--text-secondary); }
         .file-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
         
-        /* MEDIA GRID */
+        /* ===== MEDIA GRID ===== */
         .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; padding-top: 8px; }
         .media-card { background: var(--bg-primary); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); transition: var(--transition); cursor: pointer; }
         .media-card:hover { transform: translateY(-4px); border-color: var(--accent); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
@@ -226,7 +196,7 @@
         .media-title { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .media-meta { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
         
-        /* MODALS */
+        /* ===== MODALS ===== */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-secondary); padding: 32px 40px; border-radius: var(--radius); width: 90%; max-width: 450px; border: 1px solid var(--border); text-align: center; position: relative; }
@@ -236,6 +206,7 @@
         .qr-container img { max-width: 220px; border-radius: 12px; border: 3px solid var(--accent); }
         .qr-url { font-size: 12px; color: var(--accent); background: var(--bg-primary); padding: 8px 12px; border-radius: 8px; margin: 8px 0 16px; word-break: break-all; }
         
+        /* ===== VIDEO MODAL ===== */
         .video-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); align-items: center; justify-content: center; z-index: 1000; }
         .video-modal.active { display: flex; }
         .video-modal-content { width: 90%; max-width: 900px; position: relative; }
@@ -244,6 +215,7 @@
         .video-close:hover { transform: rotate(90deg); color: var(--accent); }
         .video-actions { display: flex; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
         
+        /* ===== AUDIO PLAYER ===== */
         .audio-player { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); border: 1px solid var(--accent); border-radius: var(--radius); padding: 12px 20px; z-index: 999; box-shadow: 0 8px 40px rgba(0,212,255,0.15); min-width: 350px; max-width: 600px; animation: slideUp 0.4s ease; display: none; }
         @keyframes slideUp { from { transform: translateX(-50%) translateY(80px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
         .audio-player-content { display: flex; align-items: center; gap: 12px; }
@@ -257,6 +229,7 @@
         .audio-progress::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; }
         .audio-time { display: flex; gap: 6px; font-size: 11px; color: var(--text-secondary); min-width: 60px; }
         
+        /* ===== STATUS MESSAGE ===== */
         .status { padding: 12px 16px; border-radius: 12px; margin-top: 12px; display: none; font-size: 14px; }
         .status.success { display: block; background: rgba(72,187,120,0.15); border: 1px solid #48bb78; color: #48bb78; }
         .status.error { display: block; background: rgba(229,62,62,0.15); border: 1px solid #fc8181; color: #fc8181; }
@@ -265,7 +238,7 @@
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
         .empty-state i { font-size: 48px; color: var(--accent); margin-bottom: 16px; }
         
-        /* SETTINGS */
+        /* ===== SETTINGS ===== */
         .setting-card { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; flex-wrap: wrap; gap: 12px; }
         .setting-card .info h3 { font-size: 14px; display: flex; align-items: center; gap: 8px; }
         .setting-card .info p { font-size: 12px; color: var(--text-secondary); }
@@ -307,7 +280,7 @@
             word-break: break-all;
         }
         
-        /* RESPONSIVE */
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
             .container { padding: 12px; }
             header { flex-direction: column; text-align: center; }
@@ -330,7 +303,10 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- ==========================================
+    CONTEÚDO PRINCIPAL (sempre visível)
+    ========================================== -->
+    <div class="container" id="mainContent">
         <!-- HEADER -->
         <header>
             <div class="logo">
@@ -450,7 +426,7 @@
             <div id="imageGrid" class="media-grid"></div>
         </div>
 
-        <!-- TAB CONEXÃO (SIMPLIFICADA) -->
+        <!-- TAB CONEXÃO -->
         <div class="tab-content" id="tab-connection">
             <h2><i class="fas fa-qrcode"></i> Conectar pelo QR Code</h2>
             
@@ -468,9 +444,6 @@
                     <div style="display:flex; gap:8px; justify-content:center; margin-top:12px; flex-wrap:wrap;">
                         <button class="btn btn-primary" onclick="gerarQRCodeConexao()" id="gerarQRBtn">
                             <i class="fas fa-qrcode"></i> Gerar QR Code
-                        </button>
-                        <button class="btn btn-secondary" onclick="copiarLinkConexao()" id="copiarLinkBtn">
-                            <i class="fas fa-copy"></i> Copiar Link
                         </button>
                     </div>
                     
@@ -508,7 +481,7 @@
                         
                         <div style="margin-top:8px; padding:12px; background:var(--bg-card); border-radius:12px; border:1px solid var(--border); text-align:center;">
                             <span style="font-size:12px; color:var(--text-muted);">Ou digite manualmente:</span>
-                            <div style="font-size:14px; color:var(--accent); font-family:monospace; margin-top:4px;" id="manualIp">http://192.168.1.10:5001</div>
+                            <div style="font-size:14px; color:var(--accent); font-family:monospace; margin-top:4px;" id="manualIp">https://conexz-app.onrender.com</div>
                         </div>
                     </div>
                 </div>
@@ -601,7 +574,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script>
         // =============================================
-        // CONEXZ - SCRIPT COMPLETO (SIMPLIFICADO)
+        // CONEXZ - SCRIPT COMPLETO
         // =============================================
 
         const socket = io();
@@ -610,10 +583,6 @@
         let audioTocando = false;
         let statusInterval = null;
         let currentQRCode = null;
-
-        // =============================================
-        // INICIALIZAR
-        // =============================================
 
         async function init() {
             try {
@@ -631,27 +600,23 @@
             }
         }
 
-        // =============================================
-        // STATUS
-        // =============================================
-
         async function carregarStatus() {
             try {
                 const res = await fetch('/api/status-completo');
                 const data = await res.json();
                 
-                document.getElementById('statusIP').textContent = data.ip;
-                document.getElementById('statusPort').textContent = data.port;
-                document.getElementById('statusTime').textContent = data.hora;
-                document.getElementById('statusDate').textContent = data.data;
-                document.getElementById('statusFiles').textContent = data.arquivos;
-                document.getElementById('statusVideos').textContent = data.videos + ' 🎬';
-                document.getElementById('statusMusicas').textContent = data.musicas + ' 🎵';
-                document.getElementById('statusImagens').textContent = data.imagens + ' 🖼️';
+                document.getElementById('statusIP').textContent = data.ip || '--';
+                document.getElementById('statusPort').textContent = data.port || '--';
+                document.getElementById('statusTime').textContent = data.hora || '--';
+                document.getElementById('statusDate').textContent = data.data || '--';
+                document.getElementById('statusFiles').textContent = data.arquivos || 0;
+                document.getElementById('statusVideos').textContent = (data.videos || 0) + ' 🎬';
+                document.getElementById('statusMusicas').textContent = (data.musicas || 0) + ' 🎵';
+                document.getElementById('statusImagens').textContent = (data.imagens || 0) + ' 🖼️';
                 
-                const url = `http://${data.ip}:${data.port}`;
+                const url = `http://${data.ip || '--'}:${data.port || '--'}`;
                 document.getElementById('statusUrl').textContent = url;
-                document.getElementById('manualIp').textContent = url;
+                document.getElementById('manualIp').textContent = 'https://conexz-app.onrender.com';
                 
                 const badge = document.getElementById('statusBadge');
                 if (data.status === 'online') {
@@ -687,43 +652,18 @@
             statusInterval = setInterval(carregarStatus, 30000);
         }
 
-        // =============================================
-        // IP
-        // =============================================
-
         async function detectarIP() {
             try {
                 const res = await fetch('/api/device');
                 const data = await res.json();
-                
-                const ipDisplay = document.getElementById('ipDisplay');
-                const ipAddress = document.getElementById('ipAddress');
-                const ipPort = document.getElementById('ipPort');
-                
-                ipAddress.textContent = data.ip;
-                ipPort.textContent = data.port;
-                ipDisplay.classList.add('active');
-                
                 mostrarStatus(`📡 IP: ${data.ip}:${data.port}`, 'info');
             } catch(e) {
                 mostrarStatus('❌ Erro ao detectar IP', 'error');
             }
         }
 
-        function copiarIP() {
-            const ip = document.getElementById('ipAddress').textContent;
-            const port = document.getElementById('ipPort').textContent;
-            const url = `http://${ip}:${port}`;
-            
-            navigator.clipboard.writeText(url).then(() => {
-                mostrarStatus('✅ IP copiado!', 'success');
-            }).catch(() => {
-                prompt('Copie o IP:', url);
-            });
-        }
-
         // =============================================
-        // QR CODE CONEXÃO (SIMPLIFICADO)
+        // QR CODE CONEXÃO
         // =============================================
 
         async function gerarQRCodeConexao() {
@@ -753,20 +693,8 @@
                     mostrarStatus('✅ QR Code gerado! Escaneie com o celular', 'success');
                 }
             } catch(e) {
+                console.error('Erro:', e);
                 mostrarStatus('❌ Erro ao gerar QR Code', 'error');
-            }
-        }
-
-        function copiarLinkConexao() {
-            const link = document.getElementById('connectionLinkText').textContent;
-            if (link && link !== '') {
-                navigator.clipboard.writeText(link).then(() => {
-                    mostrarStatus('✅ Link copiado!', 'success');
-                }).catch(() => {
-                    prompt('Copie o link:', link);
-                });
-            } else {
-                mostrarStatus('❌ Gere o QR Code primeiro', 'error');
             }
         }
 
@@ -775,7 +703,6 @@
         // =============================================
 
         function configurarEventos() {
-            // TABS
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.addEventListener('click', function() {
                     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -790,16 +717,10 @@
                 });
             });
 
-            // QR CODE (botão do header)
             document.getElementById('qrBtn').addEventListener('click', gerarQR);
-
-            // IP
             document.getElementById('ipBtn').addEventListener('click', detectarIP);
-
-            // REFRESH
             document.getElementById('refreshBtn').addEventListener('click', carregarArquivos);
 
-            // UPLOAD
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
             
@@ -825,7 +746,6 @@
                 }
             });
 
-            // BUSCA
             document.getElementById('searchInput').addEventListener('input', function() {
                 const query = this.value.toLowerCase();
                 document.querySelectorAll('.file-item').forEach(item => {
@@ -834,7 +754,6 @@
                 });
             });
 
-            // MODO ESCURO
             document.getElementById('darkMode').addEventListener('change', function() {
                 if(this.checked) {
                     document.documentElement.style.setProperty('--bg-primary', '#f0f4f8');
@@ -857,7 +776,6 @@
                 }
             });
 
-            // SOCKET
             socket.on('new_file', () => {
                 carregarArquivos();
                 carregarStatus();
@@ -868,7 +786,6 @@
                 carregarStatus();
             });
 
-            // FECHAR MODAIS
             document.addEventListener('keydown', (e) => {
                 if(e.key === 'Escape') {
                     fecharVideo();
@@ -1114,10 +1031,10 @@
                 const res = await fetch('/api/qr');
                 const data = await res.json();
                 container.innerHTML = `<img src="data:image/png;base64,${data.qr}">`;
-                urlEl.textContent = data.url || 'http://' + window.location.host;
+                urlEl.textContent = data.url || 'https://conexz-app.onrender.com';
             } catch(e) {
                 container.innerHTML = '<p style="color:#e53e3e;">❌ Erro ao gerar QR Code</p>';
-                urlEl.textContent = window.location.host;
+                urlEl.textContent = 'https://conexz-app.onrender.com';
             }
         }
 
@@ -1220,10 +1137,7 @@
             el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
         }
 
-        // =============================================
         // EXPORTAR FUNÇÕES
-        // =============================================
-
         window.playVideo = playVideo;
         window.fecharVideo = fecharVideo;
         window.baixarVideo = baixarVideo;
@@ -1240,29 +1154,16 @@
         window.copiarLink = copiarLink;
         window.mudarTema = mudarTema;
         window.detectarIP = detectarIP;
-        window.copiarIP = copiarIP;
         window.atualizarStatus = atualizarStatus;
         window.copiarUrlStatus = copiarUrlStatus;
         window.gerarQRCodeConexao = gerarQRCodeConexao;
-        window.copiarLinkConexao = copiarLinkConexao;
 
-        // =============================================
         // INICIAR
-        // =============================================
-
         document.addEventListener('DOMContentLoaded', init);
 
-        // Limpar intervalos ao sair
         window.addEventListener('beforeunload', function() {
             if (statusInterval) clearInterval(statusInterval);
         });
-   </script>
-   <script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
-            .then(() => console.log('✅ Service Worker registrado!'))
-            .catch(err => console.log('❌ Service Worker erro:', err));
-    }
-</script>
+    </script>
 </body>
 </html>
