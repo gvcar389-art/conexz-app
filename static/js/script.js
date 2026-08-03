@@ -1,159 +1,37 @@
-// ==========================================
-// CONEXZ - SCRIPT COMPLETO (COM AUTENTICAÇÃO)
-// ==========================================
+// =============================================
+// CONEXZ - SCRIPT COMPLETO (SEM LOGIN)
+// =============================================
 
 const socket = io();
-let currentVideoId = null;
-let currentAudio = null;
-let isAudioPlaying = false;
-let currentTheme = '#00d4ff';
+let videoAtual = null;
+let audioAtual = null;
+let audioTocando = false;
 let statusInterval = null;
+let currentQRCode = null;
 
-// ==========================================
-// AUTENTICAÇÃO
-// ==========================================
-
-async function login() {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    const status = document.getElementById('loginStatus');
-    
-    if (!email || !password) {
-        status.textContent = '❌ Preencha todos os campos';
-        status.className = 'login-status error';
-        return;
-    }
-    
-    try {
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            status.textContent = '✅ Login realizado!';
-            status.className = 'login-status success';
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            
-            if (data.user && data.user.username) {
-                document.getElementById('userNameDisplay').textContent = data.user.username;
-            }
-            
-            init();
-        } else {
-            status.textContent = '❌ ' + data.error;
-            status.className = 'login-status error';
-        }
-    } catch(e) {
-        status.textContent = '❌ Erro ao fazer login';
-        status.className = 'login-status error';
-        console.error(e);
-    }
-}
-
-async function register() {
-    const username = document.getElementById('registerUsername').value;
-    const email = document.getElementById('registerEmail').value;
-    const password = document.getElementById('registerPassword').value;
-    const status = document.getElementById('registerStatus');
-    
-    if (!username || !email || !password) {
-        status.textContent = '❌ Preencha todos os campos';
-        status.className = 'login-status error';
-        return;
-    }
-    
-    try {
-        const res = await fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, password })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            status.textContent = '✅ Cadastro realizado! Faça login.';
-            status.className = 'login-status success';
-            setTimeout(() => {
-                showLogin();
-                document.getElementById('loginEmail').value = email;
-            }, 1500);
-        } else {
-            status.textContent = '❌ ' + data.error;
-            status.className = 'login-status error';
-        }
-    } catch(e) {
-        status.textContent = '❌ Erro ao cadastrar';
-        status.className = 'login-status error';
-        console.error(e);
-    }
-}
-
-async function logout() {
-    try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        document.getElementById('mainContent').style.display = 'none';
-        document.getElementById('loginScreen').style.display = 'flex';
-        document.getElementById('loginStatus').textContent = '';
-        document.getElementById('loginStatus').className = 'login-status';
-        console.log('✅ Logout realizado');
-    } catch(e) {
-        console.error('❌ Erro no logout:', e);
-    }
-}
-
-function showRegister() {
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('registerForm').style.display = 'block';
-    document.getElementById('loginStatus').textContent = '';
-    document.getElementById('loginStatus').className = 'login-status';
-    document.getElementById('registerStatus').textContent = '';
-    document.getElementById('registerStatus').className = 'login-status';
-}
-
-function showLogin() {
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('registerForm').style.display = 'none';
-    document.getElementById('loginStatus').textContent = '';
-    document.getElementById('loginStatus').className = 'login-status';
-    document.getElementById('registerStatus').textContent = '';
-    document.getElementById('registerStatus').className = 'login-status';
-}
-
-// ==========================================
+// =============================================
 // INICIALIZAÇÃO
-// ==========================================
+// =============================================
 
 async function init() {
-    console.log('🚀 Iniciando ConexZ...');
-    
     try {
         const res = await fetch('/api/device');
         const data = await res.json();
-        document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0, 8);
-        
+        document.getElementById('deviceId').textContent = '📱 ID: ' + data.id.substring(0,8);
+        await carregarArquivos();
         await carregarStatus();
-        await loadFiles();
-        await loadVideos();
-        await loadMusic();
-        await loadImages();
-        
-        setupEvents();
+        configurarEventos();
         iniciarStatusAutomatico();
-        
-        console.log('✅ ConexZ inicializado com sucesso!');
-    } catch (error) {
-        console.error('❌ Erro na inicialização:', error);
+        console.log('✅ ConexZ inicializado!');
+    } catch(e) {
+        console.error('❌ Erro:', e);
         mostrarStatus('Erro ao inicializar', 'error');
     }
 }
 
-// ==========================================
+// =============================================
 // STATUS
-// ==========================================
+// =============================================
 
 async function carregarStatus() {
     try {
@@ -207,44 +85,19 @@ function iniciarStatusAutomatico() {
     statusInterval = setInterval(carregarStatus, 30000);
 }
 
-// ==========================================
-// IP
-// ==========================================
-
 async function detectarIP() {
     try {
         const res = await fetch('/api/device');
         const data = await res.json();
-        
-        const ipDisplay = document.getElementById('ipDisplay');
-        const ipAddress = document.getElementById('ipAddress');
-        const ipPort = document.getElementById('ipPort');
-        
-        ipAddress.textContent = data.ip;
-        ipPort.textContent = data.port;
-        ipDisplay.classList.add('active');
-        
         mostrarStatus(`📡 IP: ${data.ip}:${data.port}`, 'info');
     } catch(e) {
         mostrarStatus('❌ Erro ao detectar IP', 'error');
     }
 }
 
-function copiarIP() {
-    const ip = document.getElementById('ipAddress').textContent;
-    const port = document.getElementById('ipPort').textContent;
-    const url = `http://${ip}:${port}`;
-    
-    navigator.clipboard.writeText(url).then(() => {
-        mostrarStatus('✅ IP copiado!', 'success');
-    }).catch(() => {
-        prompt('Copie o IP:', url);
-    });
-}
-
-// ==========================================
+// =============================================
 // QR CODE CONEXÃO
-// ==========================================
+// =============================================
 
 async function gerarQRCodeConexao() {
     try {
@@ -267,6 +120,7 @@ async function gerarQRCodeConexao() {
             
             document.getElementById('manualIp').textContent = data.url;
             
+            currentQRCode = data.url;
             document.getElementById('gerarQRBtn').innerHTML = '<i class="fas fa-sync"></i> Atualizar QR Code';
             
             mostrarStatus('✅ QR Code gerado! Escaneie com o celular', 'success');
@@ -277,84 +131,64 @@ async function gerarQRCodeConexao() {
     }
 }
 
-function copiarLinkConexao() {
-    const link = document.getElementById('connectionLinkText').textContent;
-    if (link && link !== '') {
-        navigator.clipboard.writeText(link).then(() => {
-            mostrarStatus('✅ Link copiado!', 'success');
-        }).catch(() => {
-            prompt('Copie o link:', link);
-        });
-    } else {
-        mostrarStatus('❌ Gere o QR Code primeiro', 'error');
-    }
-}
+// =============================================
+// CONFIGURAR EVENTOS
+// =============================================
 
-// ==========================================
-// EVENTOS
-// ==========================================
-
-function setupEvents() {
-    document.querySelectorAll('.tab').forEach(item => {
-        item.addEventListener('click', function() {
-            document.querySelectorAll('.tab').forEach(i => i.classList.remove('active'));
+function configurarEventos() {
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             this.classList.add('active');
-            
-            const tab = this.dataset.tab;
+            const tabName = this.dataset.tab;
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            const target = document.getElementById(`tab-${tab}`);
-            if (target) target.classList.add('active');
-            
-            if (tab === 'videos') loadVideos();
-            if (tab === 'music') loadMusic();
-            if (tab === 'images') loadImages();
+            const target = document.getElementById('tab-' + tabName);
+            if(target) target.classList.add('active');
+            if(['videos', 'music', 'images', 'files'].includes(tabName)) {
+                carregarArquivos();
+            }
         });
     });
-    
+
+    document.getElementById('qrBtn').addEventListener('click', gerarQR);
+    document.getElementById('ipBtn').addEventListener('click', detectarIP);
+    document.getElementById('refreshBtn').addEventListener('click', carregarArquivos);
+
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     
-    if (dropZone) {
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length > 0) {
-                uploadFiles(e.dataTransfer.files);
-            }
-        });
-    }
-    
-    if (fileInput) {
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) {
-                uploadFiles(fileInput.files);
-                fileInput.value = '';
-            }
-        });
-    }
-    
-    document.getElementById('qrBtn').addEventListener('click', gerarQR);
-    document.getElementById('ipBtn').addEventListener('click', detectarIP);
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-        loadFiles();
-        loadVideos();
-        loadMusic();
-        loadImages();
-        carregarStatus();
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
     });
-    
-    document.getElementById('searchInput').addEventListener('input', filterFiles);
-    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if(e.dataTransfer.files.length) {
+            enviarArquivos(e.dataTransfer.files);
+        }
+    });
+    fileInput.addEventListener('change', () => {
+        if(fileInput.files.length) {
+            enviarArquivos(fileInput.files);
+            fileInput.value = '';
+        }
+    });
+
+    document.getElementById('searchInput').addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        document.querySelectorAll('.file-item').forEach(item => {
+            const name = item.dataset.name || '';
+            item.style.display = name.includes(query) ? 'flex' : 'none';
+        });
+    });
+
     document.getElementById('darkMode').addEventListener('change', function() {
-        if (this.checked) {
+        if(this.checked) {
             document.documentElement.style.setProperty('--bg-primary', '#f0f4f8');
             document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
             document.documentElement.style.setProperty('--bg-card', '#e8edf3');
@@ -374,433 +208,250 @@ function setupEvents() {
             document.documentElement.style.setProperty('--border', '#2a2a5a');
         }
     });
-    
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            const color = this.dataset.color;
-            currentTheme = color;
-            document.documentElement.style.setProperty('--accent', color);
-            
-            document.querySelectorAll('.btn-primary').forEach(b => {
-                b.style.background = color;
-            });
-            document.querySelectorAll('.tab.active').forEach(t => {
-                t.style.background = color;
-                t.style.borderColor = color;
-            });
-            document.querySelectorAll('.badge').forEach(b => {
-                b.style.background = color;
-            });
-            document.querySelectorAll('.logo-icon').forEach(l => {
-                l.style.background = color;
-            });
-        });
-    });
-    
-    socket.on('connect', () => {
-        console.log('🔌 Conectado ao servidor');
-        mostrarStatus('Conectado ao servidor', 'success');
-    });
-    
-    socket.on('new_file', (data) => {
-        console.log(`📄 Novo arquivo: ${data.name}`);
-        loadFiles();
-        loadVideos();
-        loadMusic();
-        loadImages();
+
+    socket.on('new_file', () => {
+        carregarArquivos();
         carregarStatus();
-        mostrarStatus(`📄 ${data.name} recebido!`, 'success');
+        mostrarStatus('📄 Novo arquivo recebido!', 'success');
     });
-    
     socket.on('file_deleted', () => {
-        loadFiles();
-        loadVideos();
-        loadMusic();
-        loadImages();
+        carregarArquivos();
         carregarStatus();
     });
-    
-    const progress = document.getElementById('audioProgress');
-    if (progress) {
-        progress.addEventListener('input', function() {
-            if (currentAudio) {
-                currentAudio.currentTime = parseFloat(this.value);
-            }
-        });
-    }
-    
+
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeVideoPlayer();
+        if(e.key === 'Escape') {
+            fecharVideo();
             fecharQR();
-            closeAudioPlayer();
+            fecharAudio();
         }
     });
-    
+
     document.getElementById('videoModal').addEventListener('click', function(e) {
-        if (e.target === this) closeVideoPlayer();
+        if(e.target === this) fecharVideo();
     });
     document.getElementById('qrModal').addEventListener('click', function(e) {
-        if (e.target === this) fecharQR();
+        if(e.target === this) fecharQR();
     });
 }
 
-// ==========================================
+// =============================================
 // UPLOAD
-// ==========================================
+// =============================================
 
-async function uploadFiles(files) {
-    if (files.length === 0) return;
+async function enviarArquivos(files) {
+    const form = new FormData();
+    for(let f of files) form.append('file', f);
     
-    const formData = new FormData();
-    for (let file of files) {
-        formData.append('file', file);
-    }
-    
-    const progressBar = document.getElementById('progressContainer');
-    const progressFill = document.getElementById('progressFill');
-    const progressText = document.getElementById('progressText');
-    
-    progressBar.style.display = 'flex';
-    progressFill.style.width = '0%';
-    progressText.textContent = '0%';
+    const progress = document.getElementById('progressContainer');
+    const fill = document.getElementById('progressFill');
+    const text = document.getElementById('progressText');
+    progress.style.display = 'flex';
+    fill.style.width = '0%';
+    text.textContent = '0%';
     
     mostrarStatus('⏳ Enviando...', 'info');
     
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/upload');
-    
-    xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-            const percent = Math.round((e.loaded / e.total) * 100);
-            progressFill.style.width = percent + '%';
-            progressText.textContent = percent + '%';
-        }
-    };
-    
-    xhr.onload = () => {
-        progressBar.style.display = 'none';
-        if (xhr.status === 200) {
-            mostrarStatus('✅ Arquivo enviado com sucesso!', 'success');
-            loadFiles();
-            loadVideos();
-            loadMusic();
-            loadImages();
-            carregarStatus();
-        } else {
-            mostrarStatus('❌ Erro ao enviar arquivo', 'error');
-        }
-    };
-    
-    xhr.onerror = () => {
-        progressBar.style.display = 'none';
-        mostrarStatus('❌ Erro de conexão', 'error');
-    };
-    
-    xhr.send(formData);
+    try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/upload');
+        
+        xhr.upload.onprogress = (e) => {
+            if(e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 100);
+                fill.style.width = pct + '%';
+                text.textContent = pct + '%';
+            }
+        };
+        
+        xhr.onload = () => {
+            progress.style.display = 'none';
+            if(xhr.status === 200) {
+                mostrarStatus('✅ Arquivo enviado com sucesso!', 'success');
+                carregarArquivos();
+                carregarStatus();
+            } else {
+                mostrarStatus('❌ Erro ao enviar', 'error');
+            }
+        };
+        
+        xhr.onerror = () => {
+            progress.style.display = 'none';
+            mostrarStatus('❌ Erro de conexão', 'error');
+        };
+        
+        xhr.send(form);
+    } catch(e) {
+        progress.style.display = 'none';
+        mostrarStatus('❌ Erro ao enviar', 'error');
+    }
 }
 
-// ==========================================
+// =============================================
 // ARQUIVOS
-// ==========================================
+// =============================================
 
-async function loadFiles() {
+async function carregarArquivos() {
     try {
         const res = await fetch('/api/files');
         const files = await res.json();
-        renderFiles(files);
+        renderizarArquivos(files);
+        renderizarMidia(files);
         document.getElementById('fileCount').textContent = files.length;
-    } catch (error) {
-        console.error('❌ Erro ao carregar arquivos:', error);
+    } catch(e) {
+        console.error('❌ Erro:', e);
         mostrarStatus('Erro ao carregar arquivos', 'error');
     }
 }
 
-function renderFiles(files) {
-    const container = document.getElementById('fileList');
-    if (!container) return;
-    
-    if (files.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-inbox fa-4x"></i>
-                <h3>Nenhum arquivo</h3>
-                <p>Envie seu primeiro arquivo!</p>
-            </div>
-        `;
+function renderizarArquivos(files) {
+    const list = document.getElementById('fileList');
+    if(!files.length) {
+        list.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><p>Nenhum arquivo encontrado</p><p style="font-size:14px;">Envie seu primeiro arquivo!</p></div>`;
         return;
     }
     
-    container.innerHTML = files.map(file => `
-        <div class="file-item" data-id="${file.id}" data-name="${file.name.toLowerCase()}">
+    list.innerHTML = files.map(f => `
+        <div class="file-item" data-name="${f.name.toLowerCase()}">
             <div class="file-info">
-                <i class="${getIcon(file.name)}"></i>
+                <i class="${getIcon(f.name)}"></i>
                 <div class="file-details">
-                    <div class="file-name">${file.name}</div>
-                    <div class="file-meta">${file.size_formatted} • ${file.date}</div>
+                    <div class="file-name">${f.name}</div>
+                    <div class="file-meta">${f.size_formatted} • ${f.date}</div>
                 </div>
             </div>
             <div class="file-actions">
-                <button class="btn btn-sm btn-secondary" onclick="visualizarArquivo('${file.id}')" title="Visualizar">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button class="btn btn-sm btn-secondary" onclick="baixarArquivo('${file.id}')" title="Baixar">
-                    <i class="fas fa-download"></i>
-                </button>
-                <button class="btn btn-sm btn-secondary" onclick="compartilharArquivo('${file.id}')" title="Compartilhar">
-                    <i class="fas fa-share-alt"></i>
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="deletarArquivo('${file.id}')" title="Deletar">
-                    <i class="fas fa-trash"></i>
-                </button>
+                <button class="btn btn-sm btn-secondary" onclick="visualizarArquivo('${f.id}')" title="Visualizar"><i class="fas fa-eye"></i></button>
+                <button class="btn btn-sm btn-secondary" onclick="baixarArquivo('${f.id}')" title="Baixar"><i class="fas fa-download"></i></button>
+                <button class="btn btn-sm btn-secondary" onclick="compartilharArquivo('${f.id}')" title="Compartilhar"><i class="fas fa-share-alt"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deletarArquivo('${f.id}')" title="Deletar"><i class="fas fa-trash"></i></button>
             </div>
         </div>
     `).join('');
 }
 
-function filterFiles() {
-    const query = document.getElementById('searchInput').value.toLowerCase();
-    document.querySelectorAll('.file-item').forEach(item => {
-        const name = item.dataset.name || '';
-        item.style.display = name.includes(query) ? 'flex' : 'none';
-    });
-}
-
-// ==========================================
-// VÍDEOS
-// ==========================================
-
-async function loadVideos() {
-    try {
-        const res = await fetch('/api/files');
-        const files = await res.json();
-        const videos = files.filter(f => f.name.match(/\.(mp4|webm|mov|mkv|avi)$/i));
-        renderVideos(videos);
-    } catch (error) {
-        console.error('❌ Erro ao carregar vídeos:', error);
-    }
-}
-
-function renderVideos(videos) {
-    const grid = document.getElementById('videoGrid');
-    if (!grid) return;
+function renderizarMidia(files) {
+    const videos = files.filter(f => f.name.match(/\.(mp4|webm|mov|mkv|avi)$/i));
+    const audios = files.filter(f => f.name.match(/\.(mp3|wav|ogg|flac|m4a)$/i));
+    const imagens = files.filter(f => f.name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i));
     
-    if (videos.length === 0) {
-        grid.innerHTML = `
-            <div class="empty-state" style="grid-column:1/-1;">
-                <i class="fas fa-play-circle fa-4x"></i>
-                <h3>Nenhum vídeo</h3>
-                <p>Envie um vídeo MP4 para assistir</p>
+    document.getElementById('videoGrid').innerHTML = videos.length ? 
+        videos.map(v => `
+            <div class="media-card" onclick="playVideo('${v.id}')">
+                <video><source src="/api/view/${v.id}"></video>
+                <div class="media-info">
+                    <div class="media-title">${v.name}</div>
+                    <div class="media-meta">${v.size_formatted}</div>
+                </div>
             </div>
-        `;
-        return;
-    }
+        `).join('') :
+        `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-play-circle"></i><p>Nenhum vídeo encontrado</p></div>`;
     
-    grid.innerHTML = videos.map(v => `
-        <div class="media-card" onclick="playVideo('${v.id}')">
-            <video>
-                <source src="/api/view/${v.id}" type="video/mp4">
-            </video>
-            <div class="media-info">
-                <div class="media-title">${v.name}</div>
-                <div class="media-meta">${v.size_formatted}</div>
+    document.getElementById('musicGrid').innerHTML = audios.length ?
+        audios.map(a => `
+            <div class="media-card" onclick="playAudio('${a.id}')">
+                <div class="media-preview"><i class="fas fa-music"></i></div>
+                <div class="media-info">
+                    <div class="media-title">${a.name}</div>
+                    <div class="media-meta">${a.size_formatted}</div>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('') :
+        `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-music"></i><p>Nenhuma música encontrada</p></div>`;
+    
+    document.getElementById('imageGrid').innerHTML = imagens.length ?
+        imagens.map(i => `
+            <div class="media-card" onclick="visualizarArquivo('${i.id}')">
+                <div class="media-preview"><i class="fas fa-image" style="font-size:40px;"></i></div>
+                <div class="media-info">
+                    <div class="media-title">${i.name}</div>
+                    <div class="media-meta">${i.size_formatted}</div>
+                </div>
+            </div>
+        `).join('') :
+        `<div class="empty-state" style="grid-column:1/-1;"><i class="fas fa-images"></i><p>Nenhuma imagem encontrada</p></div>`;
 }
 
-function playVideo(fileId) {
-    currentVideoId = fileId;
+// =============================================
+// VÍDEO
+// =============================================
+
+function playVideo(id) {
+    videoAtual = id;
     const modal = document.getElementById('videoModal');
     const player = document.getElementById('videoPlayer');
-    
-    player.src = `/api/view/${fileId}`;
-    player.load();
+    player.src = '/api/view/' + id;
     modal.classList.add('active');
     player.play();
 }
 
-function closeVideoPlayer() {
-    const modal = document.getElementById('videoModal');
+function fecharVideo() {
     const player = document.getElementById('videoPlayer');
     player.pause();
     player.src = '';
-    modal.classList.remove('active');
+    document.getElementById('videoModal').classList.remove('active');
 }
 
-function baixarVideo() {
-    if (currentVideoId) baixarArquivo(currentVideoId);
-}
+function baixarVideo() { if(videoAtual) baixarArquivo(videoAtual); }
+function compartilharVideo() { if(videoAtual) compartilharArquivo(videoAtual); }
 
-function compartilharVideo() {
-    if (currentVideoId) compartilharArquivo(currentVideoId);
-}
+// =============================================
+// ÁUDIO
+// =============================================
 
-// ==========================================
-// MÚSICAS
-// ==========================================
-
-async function loadMusic() {
-    try {
-        const res = await fetch('/api/files');
-        const files = await res.json();
-        const music = files.filter(f => f.name.match(/\.(mp3|wav|ogg|flac|m4a)$/i));
-        renderMusic(music);
-    } catch (error) {
-        console.error('❌ Erro ao carregar músicas:', error);
-    }
-}
-
-function renderMusic(music) {
-    const grid = document.getElementById('musicGrid');
-    if (!grid) return;
+function playAudio(id) {
+    if(audioAtual) { audioAtual.pause(); audioAtual = null; }
     
-    if (music.length === 0) {
-        grid.innerHTML = `
-            <div class="empty-state" style="grid-column:1/-1;">
-                <i class="fas fa-music fa-4x"></i>
-                <h3>Nenhuma música</h3>
-                <p>Envie uma música MP3 para ouvir</p>
-            </div>
-        `;
-        return;
-    }
+    audioAtual = new Audio('/api/view/' + id);
     
-    grid.innerHTML = music.map(m => `
-        <div class="media-card" onclick="playAudio('${m.id}')">
-            <div class="media-preview">
-                <i class="fas fa-music"></i>
-            </div>
-            <div class="media-info">
-                <div class="media-title">${m.name}</div>
-                <div class="media-meta">${m.size_formatted}</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function playAudio(fileId) {
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-    }
-    
-    fetch('/api/files')
-        .then(res => res.json())
-        .then(files => {
-            const file = files.find(f => f.id === fileId);
-            if (file) {
-                document.getElementById('audioTitle').textContent = '🎵 ' + file.name;
-            }
-        });
-    
-    currentAudio = new Audio(`/api/view/${fileId}`);
-    
-    currentAudio.addEventListener('loadedmetadata', () => {
-        document.getElementById('audioDuration').textContent = formatTempo(currentAudio.duration);
-        document.getElementById('audioProgress').max = currentAudio.duration;
+    fetch('/api/files').then(r => r.json()).then(files => {
+        const f = files.find(x => x.id === id);
+        if(f) document.getElementById('audioTitle').textContent = '🎵 ' + f.name;
     });
     
-    currentAudio.addEventListener('timeupdate', () => {
-        document.getElementById('audioCurrentTime').textContent = formatTempo(currentAudio.currentTime);
-        document.getElementById('audioProgress').value = currentAudio.currentTime;
-    });
+    audioAtual.ontimeupdate = () => {
+        if(audioAtual.duration) {
+            const pct = (audioAtual.currentTime / audioAtual.duration) * 100;
+            document.getElementById('audioProgress').value = pct;
+            document.getElementById('audioCurrentTime').textContent = formatTempo(audioAtual.currentTime);
+        }
+    };
     
-    currentAudio.addEventListener('ended', closeAudioPlayer);
-    currentAudio.addEventListener('error', () => {
-        mostrarStatus('❌ Erro ao tocar música', 'error');
-    });
+    audioAtual.onloadedmetadata = () => {
+        document.getElementById('audioDuration').textContent = formatTempo(audioAtual.duration);
+    };
+    
+    audioAtual.onended = fecharAudio;
+    audioAtual.onerror = () => mostrarStatus('❌ Erro ao tocar música', 'error');
     
     document.getElementById('audioPlayer').style.display = 'block';
-    
-    currentAudio.play()
-        .then(() => {
-            isAudioPlaying = true;
-            updateAudioButton();
-        })
-        .catch(() => {
-            mostrarStatus('❌ Erro ao tocar música', 'error');
-        });
+    audioAtual.play();
+    audioTocando = true;
+    document.getElementById('audioBtn').innerHTML = '<i class="fas fa-pause"></i>';
 }
 
-function toggleAudioPlay() {
-    if (!currentAudio) return;
-    
-    if (isAudioPlaying) {
-        currentAudio.pause();
+function toggleAudio() {
+    if(!audioAtual) return;
+    if(audioTocando) {
+        audioAtual.pause();
+        document.getElementById('audioBtn').innerHTML = '<i class="fas fa-play"></i>';
     } else {
-        currentAudio.play();
+        audioAtual.play();
+        document.getElementById('audioBtn').innerHTML = '<i class="fas fa-pause"></i>';
     }
-    isAudioPlaying = !isAudioPlaying;
-    updateAudioButton();
+    audioTocando = !audioTocando;
 }
 
-function updateAudioButton() {
-    const btn = document.getElementById('audioBtn');
-    if (!btn) return;
-    btn.innerHTML = isAudioPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
-}
-
-function closeAudioPlayer() {
-    if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.src = '';
-        currentAudio = null;
-    }
+function fecharAudio() {
+    if(audioAtual) { audioAtual.pause(); audioAtual.src = ''; audioAtual = null; }
     document.getElementById('audioPlayer').style.display = 'none';
-    isAudioPlaying = false;
-    updateAudioButton();
+    audioTocando = false;
+    document.getElementById('audioBtn').innerHTML = '<i class="fas fa-play"></i>';
 }
 
-// ==========================================
-// IMAGENS
-// ==========================================
-
-async function loadImages() {
-    try {
-        const res = await fetch('/api/files');
-        const files = await res.json();
-        const images = files.filter(f => f.name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i));
-        renderImages(images);
-    } catch (error) {
-        console.error('❌ Erro ao carregar imagens:', error);
-    }
-}
-
-function renderImages(images) {
-    const grid = document.getElementById('imageGrid');
-    if (!grid) return;
-    
-    if (images.length === 0) {
-        grid.innerHTML = `
-            <div class="empty-state" style="grid-column:1/-1;">
-                <i class="fas fa-images fa-4x"></i>
-                <h3>Nenhuma imagem</h3>
-                <p>Envie uma imagem para visualizar</p>
-            </div>
-        `;
-        return;
-    }
-    
-    grid.innerHTML = images.map(img => `
-        <div class="media-card" onclick="visualizarArquivo('${img.id}')">
-            <div class="media-preview">
-                <i class="fas fa-image" style="font-size:40px;"></i>
-            </div>
-            <div class="media-info">
-                <div class="media-title">${img.name}</div>
-                <div class="media-meta">${img.size_formatted}</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-// ==========================================
-// QR CODE (MODAL)
-// ==========================================
+// =============================================
+// QR CODE MODAL
+// =============================================
 
 async function gerarQR() {
     const modal = document.getElementById('qrModal');
@@ -830,62 +481,81 @@ async function copiarLink() {
     mostrarStatus('✅ Link copiado!', 'success');
 }
 
-// ==========================================
+// =============================================
 // FUNÇÕES COMPARTILHADAS
-// ==========================================
+// =============================================
 
 function visualizarArquivo(id) {
-    window.open(`/api/view/${id}`, '_blank');
+    window.open('/api/view/' + id, '_blank');
 }
 
 function baixarArquivo(id) {
-    window.location.href = `/api/download/${id}`;
+    window.location.href = '/api/download/' + id;
     mostrarStatus('⬇️ Download iniciado', 'success');
 }
 
 async function compartilharArquivo(id) {
     try {
-        const res = await fetch(`/api/share/${id}`);
+        const res = await fetch('/api/share/' + id);
         const data = await res.json();
         await navigator.clipboard.writeText(data.link);
         mostrarStatus('✅ Link copiado!', 'success');
-        alert(`Link compartilhável:\n${data.link}\n\nVálido por 24 horas`);
+        alert('Link compartilhável:\n' + data.link + '\n\nVálido por 24 horas');
     } catch(e) {
         mostrarStatus('❌ Erro ao compartilhar', 'error');
     }
 }
 
 async function deletarArquivo(id) {
-    if (!confirm('Tem certeza que deseja deletar este arquivo?')) return;
-    
+    if(!confirm('Tem certeza que deseja deletar este arquivo?')) return;
     try {
-        await fetch(`/api/delete/${id}`, { method: 'DELETE' });
+        await fetch('/api/delete/' + id, { method: 'DELETE' });
         mostrarStatus('🗑️ Arquivo deletado', 'success');
-        loadFiles();
-        loadVideos();
-        loadMusic();
-        loadImages();
+        carregarArquivos();
         carregarStatus();
     } catch(e) {
         mostrarStatus('❌ Erro ao deletar', 'error');
     }
 }
 
-// ==========================================
+// =============================================
+// TEMAS
+// =============================================
+
+function mudarTema(cor, btn) {
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.documentElement.style.setProperty('--accent', cor);
+    document.querySelectorAll('.btn-primary').forEach(b => {
+        b.style.background = cor;
+    });
+    document.querySelectorAll('.tab.active').forEach(t => {
+        t.style.background = cor;
+        t.style.borderColor = cor;
+    });
+    document.querySelectorAll('.badge').forEach(b => {
+        b.style.background = cor;
+    });
+    document.querySelectorAll('.logo-icon').forEach(l => {
+        l.style.background = cor;
+    });
+}
+
+// =============================================
 // UTILITÁRIOS
-// ==========================================
+// =============================================
 
 function getIcon(name) {
-    if (name.match(/\.(mp4|webm|mov|mkv|avi)$/i)) return 'fas fa-play-circle';
-    if (name.match(/\.(mp3|wav|ogg|flac|m4a)$/i)) return 'fas fa-music';
-    if (name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) return 'fas fa-image';
-    if (name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$/i)) return 'fas fa-file-pdf';
-    if (name.match(/\.(zip|rar|7z|tar|gz)$/i)) return 'fas fa-file-archive';
+    if(name.match(/\.(mp4|webm|mov|mkv|avi)$/i)) return 'fas fa-play-circle';
+    if(name.match(/\.(mp3|wav|ogg|flac|m4a)$/i)) return 'fas fa-music';
+    if(name.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) return 'fas fa-image';
+    if(name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$/i)) return 'fas fa-file-pdf';
+    if(name.match(/\.(zip|rar|7z|tar|gz)$/i)) return 'fas fa-file-archive';
     return 'fas fa-file';
 }
 
 function formatTempo(segundos) {
-    if (!segundos || isNaN(segundos)) return '0:00';
+    if(!segundos || isNaN(segundos)) return '0:00';
     const m = Math.floor(segundos / 60);
     const s = Math.floor(segundos % 60);
     return m + ':' + (s < 10 ? '0' : '') + s;
@@ -893,7 +563,6 @@ function formatTempo(segundos) {
 
 function mostrarStatus(msg, tipo) {
     const el = document.getElementById('status');
-    if (!el) return;
     el.textContent = msg;
     el.className = 'status ' + tipo;
     el.style.display = 'block';
@@ -901,17 +570,14 @@ function mostrarStatus(msg, tipo) {
     el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-// ==========================================
-// EXPORTAR FUNÇÕES
-// ==========================================
-
+// EXPORTAR FUNÇÕES PARA O HTML
 window.playVideo = playVideo;
-window.closeVideoPlayer = closeVideoPlayer;
+window.fecharVideo = fecharVideo;
 window.baixarVideo = baixarVideo;
 window.compartilharVideo = compartilharVideo;
 window.playAudio = playAudio;
-window.toggleAudioPlay = toggleAudioPlay;
-window.closeAudioPlayer = closeAudioPlayer;
+window.toggleAudio = toggleAudio;
+window.fecharAudio = fecharAudio;
 window.visualizarArquivo = visualizarArquivo;
 window.baixarArquivo = baixarArquivo;
 window.compartilharArquivo = compartilharArquivo;
@@ -919,48 +585,14 @@ window.deletarArquivo = deletarArquivo;
 window.gerarQR = gerarQR;
 window.fecharQR = fecharQR;
 window.copiarLink = copiarLink;
+window.mudarTema = mudarTema;
 window.detectarIP = detectarIP;
-window.copiarIP = copiarIP;
 window.atualizarStatus = atualizarStatus;
 window.copiarUrlStatus = copiarUrlStatus;
 window.gerarQRCodeConexao = gerarQRCodeConexao;
-window.copiarLinkConexao = copiarLinkConexao;
-window.login = login;
-window.register = register;
-window.logout = logout;
-window.showRegister = showRegister;
-window.showLogin = showLogin;
 
-// ==========================================
-// SERVICE WORKER
-// ==========================================
-
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('✅ Service Worker registrado!'))
-        .catch(err => console.log('❌ Service Worker erro:', err));
-}
-
-// ==========================================
 // INICIAR
-// ==========================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Verificar se o usuário já está logado
-    fetch('/api/auth/check')
-        .then(res => res.json())
-        .then(data => {
-            if (data.authenticated) {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                init();
-            }
-        })
-        .catch(() => {
-            // Se não estiver logado, mostra a tela de login
-            document.getElementById('loginScreen').style.display = 'flex';
-        });
-});
+document.addEventListener('DOMContentLoaded', init);
 
 window.addEventListener('beforeunload', function() {
     if (statusInterval) clearInterval(statusInterval);

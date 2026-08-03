@@ -32,7 +32,10 @@ body {
     overflow-x: hidden;
 }
 
-/* ===== SCROLLBAR ===== */
+/* ==========================================
+   SCROLLBAR
+   ========================================== */
+
 ::-webkit-scrollbar {
     width: 6px;
 }
@@ -57,6 +60,12 @@ body {
     justify-content: center;
     z-index: 9999;
     backdrop-filter: blur(20px);
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .login-container {
@@ -68,6 +77,12 @@ body {
     border: 1px solid var(--border);
     box-shadow: var(--shadow);
     text-align: center;
+    animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .login-logo {
@@ -78,6 +93,7 @@ body {
     font-size: 56px;
     color: var(--accent);
     margin-bottom: 12px;
+    display: block;
 }
 
 .login-logo h1 {
@@ -102,9 +118,14 @@ body {
     color: var(--text-primary);
 }
 
-.login-container input {
+.login-container .input-group {
+    position: relative;
+    margin-bottom: 14px;
+}
+
+.login-container .input-group input {
     width: 100%;
-    padding: 14px 16px;
+    padding: 14px 45px 14px 16px;
     border-radius: 12px;
     border: 1px solid var(--border);
     background: var(--bg-primary);
@@ -112,17 +133,34 @@ body {
     font-size: 14px;
     font-family: inherit;
     transition: var(--transition);
-    margin-bottom: 12px;
 }
 
-.login-container input:focus {
+.login-container .input-group input:focus {
     border-color: var(--accent);
     outline: none;
     box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
 }
 
-.login-container input::placeholder {
+.login-container .input-group input::placeholder {
     color: var(--text-muted);
+}
+
+.login-container .input-group .toggle-password {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    transition: var(--transition);
+    padding: 4px;
+}
+
+.login-container .input-group .toggle-password:hover {
+    color: var(--accent);
 }
 
 .login-container .btn {
@@ -131,6 +169,28 @@ body {
     padding: 14px;
     font-size: 16px;
     margin-top: 8px;
+}
+
+.login-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.login-options .forgot-link {
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition);
+    background: none;
+    border: none;
+}
+
+.login-options .forgot-link:hover {
+    color: var(--accent);
 }
 
 .login-link {
@@ -142,6 +202,10 @@ body {
 }
 
 .login-link:hover {
+    color: var(--accent);
+}
+
+.login-link strong {
     color: var(--accent);
 }
 
@@ -167,6 +231,31 @@ body {
     color: #fc8181;
 }
 
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0;
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.login-divider span {
+    color: var(--text-muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* ==========================================
+   USUÁRIO LOGADO
+   ========================================== */
+
 .user-info {
     display: flex;
     align-items: center;
@@ -180,6 +269,10 @@ body {
 .user-info .username {
     font-size: 13px;
     color: var(--text-secondary);
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .user-info .logout-btn {
@@ -198,14 +291,20 @@ body {
     background: rgba(229, 62, 62, 0.1);
 }
 
-/* ===== APP CONTAINER ===== */
+/* ==========================================
+   APP CONTAINER
+   ========================================== */
+
 .container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
 }
 
-/* ===== HEADER ===== */
+/* ==========================================
+   HEADER
+   ========================================== */
+
 header {
     display: flex;
     justify-content: space-between;
@@ -216,6 +315,8 @@ header {
     border: 1px solid var(--border);
     margin-bottom: 24px;
     box-shadow: var(--shadow);
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .logo {
@@ -268,7 +369,10 @@ header {
     border: 1px solid var(--border);
 }
 
-/* ===== BOTÕES ===== */
+/* ==========================================
+   BOTÕES
+   ========================================== */
+
 .btn {
     padding: 10px 20px;
     border: none;
@@ -317,7 +421,10 @@ header {
     font-size: 12px;
 }
 
-/* ===== STATUS PANEL ===== */
+/* ==========================================
+   STATUS PANEL
+   ========================================== */
+
 .status-panel {
     background: var(--bg-secondary);
     border: 1px solid var(--border);
@@ -416,7 +523,10 @@ header {
     gap: 8px;
 }
 
-/* ===== IP DISPLAY ===== */
+/* ==========================================
+   IP DISPLAY
+   ========================================== */
+
 .ip-display {
     background: var(--bg-card);
     border: 1px solid var(--accent);
@@ -455,7 +565,10 @@ header {
     margin-top: 8px;
 }
 
-/* ===== QR CODE CONEXÃO ===== */
+/* ==========================================
+   QR CODE CONEXÃO
+   ========================================== */
+
 #qrCodeImage {
     max-width: 200px;
     border-radius: 12px;
@@ -482,7 +595,10 @@ header {
     word-break: break-all;
 }
 
-/* ===== TABS ===== */
+/* ==========================================
+   TABS
+   ========================================== */
+
 .tabs {
     display: flex;
     gap: 8px;
@@ -524,7 +640,10 @@ header {
     margin-left: 6px;
 }
 
-/* ===== TAB CONTENT ===== */
+/* ==========================================
+   TAB CONTENT
+   ========================================== */
+
 .tab-content {
     display: none;
     animation: fadeIn 0.4s ease;
@@ -552,7 +671,10 @@ header {
     color: var(--accent);
 }
 
-/* ===== UPLOAD ===== */
+/* ==========================================
+   UPLOAD
+   ========================================== */
+
 .upload-area {
     border: 3px dashed var(--border);
     border-radius: var(--radius);
@@ -629,7 +751,10 @@ header {
     min-width: 40px;
 }
 
-/* ===== FILE LIST ===== */
+/* ==========================================
+   FILE LIST
+   ========================================== */
+
 .file-toolbar {
     display: flex;
     gap: 12px;
@@ -731,7 +856,10 @@ header {
     flex-wrap: wrap;
 }
 
-/* ===== MEDIA GRID ===== */
+/* ==========================================
+   MEDIA GRID
+   ========================================== */
+
 .media-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -751,7 +879,7 @@ header {
 .media-card:hover {
     transform: translateY(-4px);
     border-color: var(--accent);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
 .media-preview {
@@ -790,12 +918,15 @@ header {
     margin-top: 4px;
 }
 
-/* ===== MODALS ===== */
+/* ==========================================
+   MODALS
+   ========================================== */
+
 .modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(10px);
     align-items: center;
     justify-content: center;
@@ -858,12 +989,15 @@ header {
     word-break: break-all;
 }
 
-/* ===== VIDEO MODAL ===== */
+/* ==========================================
+   VIDEO MODAL
+   ========================================== */
+
 .video-modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.95);
+    background: rgba(0, 0, 0, 0.95);
     backdrop-filter: blur(10px);
     align-items: center;
     justify-content: center;
@@ -912,7 +1046,10 @@ header {
     flex-wrap: wrap;
 }
 
-/* ===== AUDIO PLAYER ===== */
+/* ==========================================
+   AUDIO PLAYER
+   ========================================== */
+
 .audio-player {
     position: fixed;
     bottom: 24px;
@@ -923,7 +1060,7 @@ header {
     border-radius: var(--radius);
     padding: 12px 20px;
     z-index: 999;
-    box-shadow: 0 8px 40px rgba(0,212,255,0.15);
+    box-shadow: 0 8px 40px rgba(0, 212, 255, 0.15);
     min-width: 350px;
     max-width: 600px;
     animation: slideUp 0.4s ease;
@@ -1014,7 +1151,10 @@ header {
     min-width: 60px;
 }
 
-/* ===== STATUS MESSAGE ===== */
+/* ==========================================
+   STATUS MESSAGE
+   ========================================== */
+
 .status {
     padding: 12px 16px;
     border-radius: 12px;
@@ -1044,7 +1184,10 @@ header {
     color: var(--accent);
 }
 
-/* ===== EMPTY STATE ===== */
+/* ==========================================
+   EMPTY STATE
+   ========================================== */
+
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -1057,7 +1200,10 @@ header {
     margin-bottom: 16px;
 }
 
-/* ===== SETTINGS ===== */
+/* ==========================================
+   SETTINGS
+   ========================================== */
+
 .setting-card {
     display: flex;
     justify-content: space-between;
@@ -1149,7 +1295,10 @@ header {
     box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
-/* ===== RESPONSIVE ===== */
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+
 @media (max-width: 768px) {
     .container {
         padding: 12px;
@@ -1253,5 +1402,10 @@ header {
 
     .login-logo h1 {
         font-size: 24px;
+    }
+
+    .user-info .username {
+        max-width: 60px;
+        font-size: 12px;
     }
 }
