@@ -26,5 +26,5 @@ ConexZ é uma plataforma de transferência de arquivos via QR Code, com suporte 
 
 ### 1. Clone o repositório
 ```bash
-git clone https://github.com/seu-usuario/conexz.git
-cd conexz
+git clone https://github.com/gvcar389-art/conexz-app.git
+cd conexz-app
