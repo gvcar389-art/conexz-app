@@ -3,6 +3,7 @@
 ![ConexZ](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.8+-green)
 ![Flask](https://img.shields.io/badge/flask-2.0+-lightgrey)
+![Render](https://img.shields.io/badge/deploy-Render-purple)
 
 ConexZ é uma plataforma de transferência de arquivos via QR Code, com suporte a vídeos, músicas, imagens e muito mais.
 
@@ -18,8 +19,10 @@ ConexZ é uma plataforma de transferência de arquivos via QR Code, com suporte 
 - 🌙 Modo escuro
 - 🎨 Temas personalizáveis
 - 📱 PWA (instalável como app)
+- 🔗 Compartilhamento de arquivos (links temporários)
+- 💾 Armazenamento local
 
-## 🚀 Como rodar
+## 🚀 Como rodar localmente
 
 ### 1. Clone o repositório
 ```bash
