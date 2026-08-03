@@ -6,7 +6,7 @@
     <title>ConexZ - Transferência Inteligente</title>
     
     <!-- ⭐ CONFIGURAÇÕES PARA O PWA ⭐ -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/static/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,6 +15,9 @@
     <!-- BIBLIOTECAS EXTERNAS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS PRINCIPAL -->
+    <link rel="stylesheet" href="/static/css/style.css">
     
     <style>
         /* ============================================
@@ -304,7 +307,7 @@
 </head>
 <body>
     <!-- ==========================================
-    CONTEÚDO PRINCIPAL (sempre visível)
+    CONTEÚDO PRINCIPAL (sempre visível - SEM LOGIN)
     ========================================== -->
     <div class="container" id="mainContent">
         <!-- HEADER -->
@@ -570,8 +573,10 @@
         }
     </script>
 
-    <!-- SCRIPTS -->
+    <!-- BIBLIOTECAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- SCRIPT PRINCIPAL -->
     <script>
         // =============================================
         // CONEXZ - SCRIPT COMPLETO
